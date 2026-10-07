@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="내 주변에서 무료로 잠깐 쉴 수 있는 벤치와 쉼터를 찾아보세요.">
+  <meta name="theme-color" content="#197c68">
+  <title>쉬어갈곳 - 무료 휴식공간 찾기</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="css/style.css?v=search-fix-2">
+</head>
+<body>
+  <header class="header">
+    <div class="brand-mark" aria-hidden="true">쉼</div>
+    <div>
+      <h1 class="app-title">쉬어갈곳</h1>
+      <p class="app-subtitle">주변 무료 휴식공간 찾기</p>
+    </div>
+  </header>
+
+  <section class="location-section" aria-label="위치 설정">
+    <button type="button" class="btn btn-primary" id="btnCurrentLocation"><span aria-hidden="true">◎</span> 현재 위치 사용</button>
+    <div class="search-box-wrapper">
+      <form class="search-form" id="searchForm">
+        <label class="sr-only" for="searchInput">주소 또는 장소 검색</label>
+        <input type="search" class="search-input" id="searchInput" placeholder="주소·장소 검색 (예: 서울시청)" autocomplete="off" aria-autocomplete="list" aria-controls="searchSuggestions">
+        <button type="submit" class="btn btn-search" id="btnSearch">검색</button>
+      </form>
+      <div class="search-suggestions" id="searchSuggestions" role="listbox" hidden></div>
+    </div>
+    <p class="location-hint" id="locationHint">현재 위치를 사용하거나 주소·장소를 검색하세요.</p>
+  </section>
+
+  <main class="main-content" id="mainContent" hidden>
+    <nav class="view-tabs" role="tablist" aria-label="결과 보기">
+      <button type="button" class="tab-btn active" id="tabMap" role="tab" aria-selected="true">지도</button>
+      <button type="button" class="tab-btn" id="tabList" role="tab" aria-selected="false">목록 <span id="tabCount"></span></button>
+    </nav>
+    <section class="map-panel active" id="mapPanel" aria-label="휴식공간 지도">
+      <div id="map" class="map-container" role="application" aria-label="OpenStreetMap 지도"></div>
+      <button type="button" class="btn btn-map-control" id="btnRecenter" aria-label="검색 위치로 지도 이동" title="검색 위치로">◎</button>
+      <button type="button" class="btn btn-follow-navigation" id="btnFollowNavigation" aria-label="현재 위치 따라가기" aria-pressed="true">위치 따라가는 중</button>
+    </section>
+    <section class="list-panel" id="listPanel" aria-label="주변 휴식공간 목록" hidden>
+      <div class="results-header">
+        <div><p class="eyebrow">주변에서 찾았어요</p><h2 class="results-count" id="resultsCount">휴식공간 0곳</h2></div>
+        <span class="sort-label">실제 도보거리순</span>
+      </div>
+      <div class="places-list" id="placesList" role="list"></div>
+      <div class="empty-state" id="emptyState" hidden><div class="empty-icon" aria-hidden="true">⌖</div><h3>주변에서 장소를 찾지 못했어요</h3><p>다른 위치를 검색하거나 잠시 후 다시 시도해 주세요.</p></div>
+      <p class="distance-note">도보 거리와 시간은 TMAP 보행자 경로 기준입니다. 경로를 계산할 수 없는 장소에는 직선거리 추정치를 대신 표시하지 않습니다.</p>
+    </section>
+  </main>
+
+  <div class="loading-overlay" id="loadingOverlay" hidden role="status" aria-live="polite"><div class="spinner" aria-hidden="true"></div><p id="loadingText">주변 휴식공간을 찾는 중...</p></div>
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+  <div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+  <section class="bottom-sheet" id="bottomSheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <header class="sheet-header"><div><p class="eyebrow">목적지</p><h2 class="sheet-title" id="sheetTitle">휴식공간</h2></div><button type="button" class="btn-close" id="btnCloseSheet" aria-label="상세 정보 닫기">×</button></header>
+    <section class="nav-panel" id="navPanel" aria-label="도보 길안내" hidden>
+      <p class="nav-kicker">도보 길찾기 · TMAP Mobility</p><p class="nav-instruction" id="navInstruction">경로를 불러오는 중...</p><p class="nav-distance" id="navDistance"></p><p class="nav-remaining" id="navRemaining"></p><p class="nav-status" id="navStatus" aria-live="polite"></p>
+      <div class="nav-actions"><button type="button" class="btn btn-nav-start" id="btnStartNavigation">안내 시작</button><button type="button" class="btn btn-nav-stop" id="btnStopNavigation" hidden>안내 종료</button><button type="button" class="btn btn-nav-retry" id="btnRecalculateRoute" hidden>현재 위치에서 경로 다시 찾기</button></div>
+    </section>
+    <div class="sheet-body" id="sheetBody"></div>
+  </section>
+
+  <footer class="footer"><p>지도 및 장소 데이터 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap 기여자</a> · 보행 경로 <a href="https://tmapmobility.com/" target="_blank" rel="noopener noreferrer">TMAP Mobility</a></p><p class="disclaimer">공개 지도 데이터 기반 후보이며 무료 이용·개방 여부와 실제 좌석 상태를 보장하지 않습니다. 도보 경로와 시간은 라우팅 데이터 기반 예상치입니다.</p></footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="js/utils.js"></script><script src="js/config.js"></script>
+  <script src="js/user-heading.js?v=heading-1"></script>
+  <script src="js/data.js?v=search-fix-2"></script>
+  <script src="js/place-classification.js?v=park-candidates-3"></script>
+  <script src="js/overpass.js?v=search-fix-2"></script>
+  <script src="js/public-data.js?v=provider-adapter-2"></script>
+  <script src="js/route-candidate-preservation.js?v=preserve-candidates-2"></script>
+  <script src="js/overpass-preview.js?v=grouped-parks-4"></script>
+  <script src="js/app.js?v=search-fix-2"></script>
+  <script src="js/navigation-guidance.js?v=arrival-check-1"></script>
+  <script src="js/park-results-ui.js?v=lazy-route-4"></script>
+  <script src="js/park-map-markers.js?v=heading-1"></script>
+</body>
+</html>

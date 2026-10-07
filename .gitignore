@@ -1,0 +1,8 @@
+# Secret values must stay outside source control.
+.env
+.env.*
+!.env.example
+
+# Local runtime artifacts
+node_modules/
+*.log
