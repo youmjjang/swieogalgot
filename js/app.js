@@ -3,6 +3,9 @@ const appState = {
   userLocation: null,
   userLocationAccuracy: null,
   userHeading: null,
+  searchLabel: '선택한 위치',
+  currentRadius: 1000,
+  isSearching: false,
   places: [],
   map: null,
   markers: [],
@@ -34,6 +37,8 @@ const elements = {
   mainContent: document.getElementById('mainContent'), tabMap: document.getElementById('tabMap'), tabList: document.getElementById('tabList'),
   tabCount: document.getElementById('tabCount'), mapPanel: document.getElementById('mapPanel'), listPanel: document.getElementById('listPanel'),
   placesList: document.getElementById('placesList'), emptyState: document.getElementById('emptyState'), resultsCount: document.getElementById('resultsCount'),
+  expandSearchContainer: document.getElementById('expandSearchContainer'), btnExpandSearch: document.getElementById('btnExpandSearch'),
+  expandSearchText: document.getElementById('expandSearchText'),
   bottomSheet: document.getElementById('bottomSheet'), sheetTitle: document.getElementById('sheetTitle'), sheetBody: document.getElementById('sheetBody'),
   sheetBackdrop: document.getElementById('sheetBackdrop'), btnCloseSheet: document.getElementById('btnCloseSheet'), navPanel: document.getElementById('navPanel'),
   navInstruction: document.getElementById('navInstruction'), navDistance: document.getElementById('navDistance'), navRemaining: document.getElementById('navRemaining'),
@@ -132,9 +137,15 @@ function makePlaceCard(place) {
 function renderPlaces() {
   const places = appState.places;
   elements.placesList.replaceChildren();
-  elements.emptyState.hidden = places.length > 0;
-  elements.resultsCount.textContent = `휴식공간 ${places.length}곳`;
+  elements.emptyState.hidden = places.length > 0 || appState.isSearching;
+  
+  if (appState.isSearching) {
+    elements.resultsCount.textContent = `현재 ${places.length}개 발견 · 검색 중`;
+  } else {
+    elements.resultsCount.textContent = `휴식공간 ${places.length}곳 (반경 ${(appState.currentRadius / 1000).toFixed(1)}km)`;
+  }
   elements.tabCount.textContent = places.length ? `(${places.length})` : '';
+  
   for (const group of [
     { id: 'confirmed', title: '확실한 착석 공간', places: places.filter(place => place.resultGroup !== 'possible') },
     { id: 'possible', title: '휴식 가능 장소 · 착석시설 정보 확인 필요', places: places.filter(place => place.resultGroup === 'possible') }
@@ -145,6 +156,17 @@ function renderPlaces() {
     heading.textContent = `${group.title} (${group.places.length})`;
     elements.placesList.append(heading);
     group.places.forEach(place => elements.placesList.append(makePlaceCard(place)));
+  }
+
+  // '더 넓게 검색' 버튼 표시 제어
+  if (elements.expandSearchContainer) {
+    if (appState.currentRadius < 2000 && !appState.isSearching && appState.userLocation) {
+      elements.expandSearchContainer.hidden = false;
+      const nextRadius = appState.currentRadius === 1000 ? 1500 : 2000;
+      if (elements.expandSearchText) elements.expandSearchText.textContent = `더 넓게 검색 (반경 ${(nextRadius / 1000).toFixed(1)}km)`;
+    } else {
+      elements.expandSearchContainer.hidden = true;
+    }
   }
 }
 
@@ -215,7 +237,7 @@ function renderMarkers() {
   const points = [appState.userMarker, ...appState.markers];
   if (appState.userAccuracyCircle) points.push(appState.userAccuracyCircle);
   if (points.length > 1) map.fitBounds(L.featureGroup(points).getBounds().pad(.12), { maxZoom: 16 });
-  else map.setView([appState.userLocation.lat, appState.userLocation.lng], 16);
+  else if (appState.userLocation) map.setView([appState.userLocation.lat, appState.userLocation.lng], 16);
   invalidateVisibleMap();
 }
 
@@ -466,35 +488,89 @@ function showPlaceSearchError(error) {
   elements.locationHint.textContent = '주변 장소 검색에 실패했습니다. 네트워크 상태를 확인하고 다시 시도해 주세요.';
 }
 
-async function searchAndDisplayPlaces(lat, lng, label = '선택한 위치', accuracy = null) {
+async function searchAndDisplayPlaces(lat, lng, label = '선택한 위치', accuracy = null, targetRadius = 1000) {
   const token = ++appState.searchToken;
-  appState.userLocation = { lat, lng }; appState.userLocationAccuracy = Number.isFinite(accuracy) ? accuracy : null;
-  appState.places = []; clearRouteLine(); Utils.setLoading(true, '반경 1km에서 휴식공간을 찾는 중...'); elements.mainContent.hidden = false;
+  appState.userLocation = { lat, lng };
+  appState.userLocationAccuracy = Number.isFinite(accuracy) ? accuracy : null;
+  appState.searchLabel = label;
+  appState.currentRadius = targetRadius;
+  appState.isSearching = true;
+  appState.places = [];
+  clearRouteLine();
+  
+  Utils.setLoading(true, `반경 ${(targetRadius / 1000).toFixed(1)}km에서 휴식공간을 찾는 중...`);
+  elements.mainContent.hidden = false;
+  elements.locationHint.textContent = `${label} 기준 · 반경 ${(targetRadius / 1000).toFixed(1)}km 착석시설 검색 중...`;
+  renderPlaces();
+
   try {
     const result = await Data.fetchPlacesFromOSM(lat, lng, {
-      onProgress: radius => { if (token === appState.searchToken) Utils.setLoading(true, `반경 ${radius / 1000}km에서 착석시설과 공원을 찾는 중...`); },
+      radiusMeters: targetRadius,
+      onProgress: radius => {
+        if (token === appState.searchToken) {
+          Utils.setLoading(true, `반경 ${(radius / 1000).toFixed(1)}km에서 착석시설과 공원을 찾는 중...`);
+        }
+      },
       onUpdate: update => {
         if (token !== appState.searchToken) return;
         const deduped = Data.deduplicatePlaces ? Data.deduplicatePlaces(update.places || []) : (update.places || []);
-        appState.places = deduped.map(place => ({ ...place, routeStatus: place.routeStatus || 'not-calculated', routeError: place.routeError || null }));
-        renderPlaces(); renderMarkers(); setView('map');
+        appState.places = deduped.map(place => ({
+          ...place,
+          routeStatus: place.routeStatus || 'not-calculated',
+          routeError: place.routeError || null
+        }));
+        
+        if (update.isDone) {
+          appState.isSearching = false;
+        }
+        
+        renderPlaces();
+        renderMarkers();
+        setView('map');
+        
         const parkCount = appState.places.filter(place => place.category === 'park').length;
-        elements.locationHint.textContent = `${label} 기준 · 공원 ${parkCount}곳 포함 휴식공간 ${appState.places.length}곳 탐색 중 (반경 ${((update.radiusMeters || 1000) / 1000).toFixed(1)}km).`;
+        if (appState.isSearching) {
+          elements.locationHint.textContent = `${label} 기준 · 현재 ${appState.places.length}개 발견 · 검색 중... (반경 ${(targetRadius / 1000).toFixed(1)}km)`;
+        } else {
+          const confirmed = appState.places.filter(place => place.resultGroup !== 'possible').length;
+          const accuracyText = Number.isFinite(appState.userLocationAccuracy) ? ` · 기기 보고 정확도 약 ±${formatLocationAccuracy(appState.userLocationAccuracy)}(추정)` : '';
+          elements.locationHint.textContent = `${label} 기준${accuracyText} · 확실한 착석공간 ${confirmed}곳, 휴식 가능 장소 ${appState.places.length - confirmed}곳 (공원 ${parkCount}곳) 검색 완료.`;
+        }
       }
     });
+
     if (token !== appState.searchToken) return;
     const rawPlaces = Array.isArray(result?.places) ? result.places : [];
     const places = Data.deduplicatePlaces ? Data.deduplicatePlaces(rawPlaces) : rawPlaces;
     appState.places = places.map(place => ({ ...place, routeStatus: 'not-calculated', routeError: null }));
-    renderPlaces(); renderMarkers();
+    appState.isSearching = false;
+    
+    renderPlaces();
+    renderMarkers();
+    
     const parks = appState.places.filter(place => place.category === 'park').length;
     const confirmed = appState.places.filter(place => place.resultGroup !== 'possible').length;
     const accuracyText = Number.isFinite(appState.userLocationAccuracy) ? ` · 기기 보고 정확도 약 ±${formatLocationAccuracy(appState.userLocationAccuracy)}(추정)` : '';
-    elements.locationHint.textContent = `${label} 기준${accuracyText} · 확실한 착석공간 ${confirmed}곳, 휴식 가능 장소 ${appState.places.length - confirmed}곳 (공원 ${parks}곳). 가까운 후보의 TMAP 경로는 선택 시 계산합니다.`;
-    setView('map'); Utils.setLoading(false);
+    elements.locationHint.textContent = `${label} 기준${accuracyText} · 확실한 착석공간 ${confirmed}곳, 휴식 가능 장소 ${appState.places.length - confirmed}곳 (공원 ${parks}곳) 검색 완료.`;
+    setView('map');
   } catch (error) {
-    if (token === appState.searchToken) showPlaceSearchError(error);
-  } finally { if (token === appState.searchToken) Utils.setLoading(false); }
+    if (token === appState.searchToken) {
+      appState.isSearching = false;
+      renderPlaces();
+      showPlaceSearchError(error);
+    }
+  } finally {
+    if (token === appState.searchToken) {
+      appState.isSearching = false;
+      Utils.setLoading(false);
+    }
+  }
+}
+
+async function expandSearchRadius() {
+  if (!appState.userLocation || appState.isSearching) return;
+  const nextRadius = appState.currentRadius === 1000 ? 1500 : 2000;
+  await searchAndDisplayPlaces(appState.userLocation.lat, appState.userLocation.lng, appState.searchLabel, appState.userLocationAccuracy, nextRadius);
 }
 
 async function getCurrentLocation() {
@@ -504,7 +580,7 @@ async function getCurrentLocation() {
   elements.btnCurrentLocation.disabled = true; Utils.setLoading(true, 'GPS 위치 정확도를 확인하는 중...');
   try {
     const position = await getAccurateCurrentPosition();
-    await searchAndDisplayPlaces(position.coords.latitude, position.coords.longitude, '현재 위치', position.coords.accuracy);
+    await searchAndDisplayPlaces(position.coords.latitude, position.coords.longitude, '현재 위치', position.coords.accuracy, 1000);
   } catch (error) {
     const message = error.code === 1 ? '위치 권한이 거부되었습니다. 브라우저 설정에서 허용하거나 주소를 검색해 주세요.' : '현재 위치를 가져오지 못했습니다. GPS 신호를 확인하거나 주소를 검색해 주세요.';
     elements.locationHint.textContent = message; Utils.showToast(message, 'error');
@@ -523,7 +599,7 @@ function hideSuggestions() {
 function selectSuggestionItem(item) {
   hideSuggestions();
   if (elements.searchInput) elements.searchInput.value = item.name || item.label.split(',')[0];
-  searchAndDisplayPlaces(item.lat, item.lng, item.name || item.label.split(',')[0]);
+  searchAndDisplayPlaces(item.lat, item.lng, item.name || item.label.split(',')[0], null, 1000);
 }
 
 function renderSuggestions(items) {
@@ -652,7 +728,7 @@ async function handleAddressSearch(query) {
     const results = await Data.searchAddress(query.trim(), 1, biasLocation);
     const result = Array.isArray(results) ? results[0] : results;
     if (!result) { Utils.showToast('검색 결과가 없습니다. 다른 주소나 장소명을 입력해 주세요.', 'error'); return; }
-    placeSearchStarted = true; await searchAndDisplayPlaces(result.lat, result.lng, (result.name || result.label.split(',')[0]));
+    placeSearchStarted = true; await searchAndDisplayPlaces(result.lat, result.lng, (result.name || result.label.split(',')[0]), null, 1000);
   } catch (error) { console.error('주소 검색 실패:', error); Utils.showToast('주소 검색에 실패했습니다. 잠시 후 다시 시도해 주세요.', 'error'); }
   finally { if (!placeSearchStarted) Utils.setLoading(false); }
 }
@@ -661,6 +737,10 @@ function setupEventListeners() {
   elements.btnCurrentLocation.addEventListener('click', getCurrentLocation);
   elements.searchForm.addEventListener('submit', event => { event.preventDefault(); handleAddressSearch(elements.searchInput.value); });
   
+  if (elements.btnExpandSearch) {
+    elements.btnExpandSearch.addEventListener('click', expandSearchRadius);
+  }
+
   if (elements.searchInput) {
     elements.searchInput.addEventListener('input', handleSearchInputChange);
     elements.searchInput.addEventListener('keydown', handleSearchInputKeydown);
@@ -691,4 +771,4 @@ function setupEventListeners() {
   window.addEventListener('resize', () => { if (elements.mainContent.hidden || document.body.classList.contains('navigation-mode')) { invalidateVisibleMap(); return; } setView(elements.tabList.classList.contains('active') ? 'list' : 'map'); });
 }
 document.addEventListener('DOMContentLoaded', setupEventListeners);
-window.app = { searchAndDisplayPlaces, showPlaceDetail, closePlaceDetail, startNavigation, stopNavigation };
+window.app = { searchAndDisplayPlaces, showPlaceDetail, closePlaceDetail, startNavigation, stopNavigation, expandSearchRadius };

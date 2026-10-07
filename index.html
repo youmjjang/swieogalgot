@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#197c68">
   <title>쉬어갈곳 - 무료 휴식공간 찾기</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="css/style.css?v=search-fix-2">
+  <link rel="stylesheet" href="css/style.css?v=search-opt-1">
 </head>
 <body>
   <header class="header">
@@ -47,7 +47,13 @@
         <span class="sort-label">실제 도보거리순</span>
       </div>
       <div class="places-list" id="placesList" role="list"></div>
-      <div class="empty-state" id="emptyState" hidden><div class="empty-icon" aria-hidden="true">⌖</div><h3>주변에서 장소를 찾지 못했어요</h3><p>다른 위치를 검색하거나 잠시 후 다시 시도해 주세요.</p></div>
+      <div class="expand-search-container" id="expandSearchContainer" hidden>
+        <button type="button" class="btn btn-expand-search" id="btnExpandSearch">
+          <span class="expand-icon" aria-hidden="true">🔍</span>
+          <span id="expandSearchText">더 넓게 검색 (반경 2km)</span>
+        </button>
+      </div>
+      <div class="empty-state" id="emptyState" hidden><div class="empty-icon" aria-hidden="true">⌖</div><h3>주변에서 장소를 찾지 못했어요</h3><p>다른 위치를 검색하거나 '더 넓게 검색'을 눌러보세요.</p></div>
       <p class="distance-note">도보 거리와 시간은 TMAP 보행자 경로 기준입니다. 경로를 계산할 수 없는 장소에는 직선거리 추정치를 대신 표시하지 않습니다.</p>
     </section>
   </main>
@@ -70,13 +76,13 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="js/utils.js"></script><script src="js/config.js"></script>
   <script src="js/user-heading.js?v=heading-1"></script>
-  <script src="js/data.js?v=search-fix-2"></script>
+  <script src="js/data.js?v=search-opt-1"></script>
   <script src="js/place-classification.js?v=park-candidates-3"></script>
-  <script src="js/overpass.js?v=search-fix-2"></script>
+  <script src="js/overpass.js?v=search-opt-1"></script>
   <script src="js/public-data.js?v=provider-adapter-2"></script>
   <script src="js/route-candidate-preservation.js?v=preserve-candidates-2"></script>
   <script src="js/overpass-preview.js?v=grouped-parks-4"></script>
-  <script src="js/app.js?v=search-fix-2"></script>
+  <script src="js/app.js?v=search-opt-1"></script>
   <script src="js/navigation-guidance.js?v=arrival-check-1"></script>
   <script src="js/park-results-ui.js?v=lazy-route-4"></script>
   <script src="js/park-map-markers.js?v=heading-1"></script>

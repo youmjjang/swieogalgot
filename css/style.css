@@ -188,6 +188,14 @@ button { -webkit-tap-highlight-color: transparent; }
 .results-count { margin: 0; font-size: 20px; letter-spacing: -.04em; }
 .sort-label { margin-bottom: 3px; color: var(--muted); font-size: 12px; }
 .places-list { display: flex; flex-direction: column; gap: 9px; }
+
+/* 더 넓게 검색 버튼 영역 */
+.expand-search-container { margin: 18px 0 8px; }
+.btn-expand-search { width: 100%; min-height: 48px; border: 1px dashed #207d6a; border-radius: 14px; background: var(--mint); color: var(--green-dark); font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: background 0.18s, transform 0.18s; }
+.btn-expand-search:hover { background: #d7ede4; transform: translateY(-1px); }
+.btn-expand-search:active { transform: scale(0.98); }
+.btn-expand-search:disabled { opacity: 0.6; cursor: not-allowed; }
+
 .place-group-title { margin: 16px 2px 2px; color: var(--green-dark); font-size: 14px; font-weight: 700; line-height: 1.5; }
 .place-group-title:first-child { margin-top: 0; }
 .place-group-possible { color: #785322; }
