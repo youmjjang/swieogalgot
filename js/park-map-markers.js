@@ -1,57 +1,49 @@
-// 결과 마커 갱신은 선택된 장소와 TMAP 경로 상태를 지우지 않습니다.
-// 공원처럼 경로를 장소 선택 시 계산하는 후보를 눌렀을 때 기존 상세/TMAP 흐름을 보존합니다.
+// Leaflet의 휴식공간 마커를 생성합니다. 현재 위치와 검색 출발점 마커는 앱이 별도로 관리합니다.
 (() => {
-  window.renderMarkers = function renderMarkersPreservingRoute() {
-    const map = getMap();
-    map.invalidateSize({ pan: false });
-    appState.markers.forEach(marker => marker.remove());
-    appState.markers = [];
-    if (appState.userMarker) appState.userMarker.remove();
-    if (appState.userAccuracyCircle) appState.userAccuracyCircle.remove();
-    appState.userAccuracyCircle = null;
+  function parseCoordinate(value, min, max) {
+    // null, undefined, 빈 문자열은 Number()에서 0이 되므로 변환 전에 제외합니다.
+    if (typeof value !== 'number' && typeof value !== 'string') return null;
+    if (typeof value === 'string' && value.trim() === '') return null;
 
-    const accuracy = appState.userLocationAccuracy;
-    const accuracyText = Number.isFinite(accuracy)
-      ? `기기 보고 위치 정확도 약 ±${escapeHtml(formatLocationAccuracy(accuracy))} (추정)`
-      : '';
-    if (Number.isFinite(accuracy) && accuracy > 0 && accuracy <= 500) {
-      appState.userAccuracyCircle = L.circle([appState.userLocation.lat, appState.userLocation.lng], {
-        radius: accuracy,
-        color: '#2878d0',
-        weight: 1,
-        fillColor: '#2878d0',
-        fillOpacity: 0.1
-      }).addTo(map);
-    }
+    const coordinate = Number(value);
+    if (!Number.isFinite(coordinate) || coordinate < min || coordinate > max) return null;
+    return coordinate;
+  }
 
-    const popup = accuracyText ? `내 위치<br><small>${accuracyText}</small>` : '내 위치';
-    const heading = window.UserHeading ? window.UserHeading.getHeading() : null;
-    if (window.UserHeading) {
-      appState.userMarker = L.marker([appState.userLocation.lat, appState.userLocation.lng], {
-        icon: window.UserHeading.createUserIcon(heading)
-      }).addTo(map).bindPopup(popup);
-    } else {
-      appState.userMarker = L.circleMarker([appState.userLocation.lat, appState.userLocation.lng], {
-        radius: 8, color: '#ffffff', weight: 3, fillColor: '#2878d0', fillOpacity: 1
-      }).addTo(map).bindPopup(popup);
-    }
+  function createPlaceMarker({ map, place, onSelect, escapeHtml, routeSummary }) {
+    if (!map || !place) return null;
 
-    for (const place of appState.places) {
-      const marker = L.marker([place.lat, place.lng]).addTo(map);
-      const routeLabel = place.routeStatus === 'ok'
-        ? `도보 ${escapeHtml(place.routeDistanceText)} · 약 ${escapeHtml(place.routeDurationText)}`
-        : place.routeStatus === 'not-calculated'
-          ? 'TMAP 도보 경로는 장소 선택 시 계산'
-          : escapeHtml(place.routeError || '도보 경로를 불러오지 못했습니다');
-      marker.bindPopup(`<strong>${escapeHtml(place.name)}</strong><br>${escapeHtml(place.type)}<br>${routeLabel}`);
-      marker.on('click', () => showPlaceDetail(place));
-      appState.markers.push(marker);
-    }
+    const lat = parseCoordinate(place.lat, -90, 90);
+    const lng = parseCoordinate(place.lng, -180, 180);
+    if (lat === null || lng === null) return null;
 
-    const points = [appState.userMarker, ...appState.markers];
-    if (appState.userAccuracyCircle) points.push(appState.userAccuracyCircle);
-    if (points.length > 1) map.fitBounds(L.featureGroup(points).getBounds().pad(0.12), { maxZoom: 16 });
-    else map.setView([appState.userLocation.lat, appState.userLocation.lng], 16);
-    invalidateVisibleMap();
-  };
+    const icon = L.divIcon({
+      className: 'place-marker',
+      html: '<span class="place-marker-pin" aria-hidden="true"></span>',
+      iconSize: [38, 44],
+      iconAnchor: [19, 40]
+    });
+    const marker = L.marker([lat, lng], {
+      icon,
+      title: place.name || '휴식공간',
+      alt: `${place.name || '휴식공간'}. 눌러 상세 정보 보기`,
+      keyboard: true,
+      riseOnHover: true,
+      zIndexOffset: 100
+    }).addTo(map);
+
+    const summary = typeof routeSummary === 'function' ? routeSummary(place) : '';
+    const detail = [place.type, summary].filter(Boolean).map(value => escapeHtml(value)).join('<br>');
+    marker.bindTooltip(
+      `<strong>${escapeHtml(place.name || '휴식공간')}</strong>${detail ? `<br>${detail}` : ''}`,
+      { direction: 'top', offset: [0, -34], opacity: 0.96 }
+    );
+    marker.on('click', event => {
+      if (event?.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
+      if (typeof onSelect === 'function') onSelect(place);
+    });
+    return marker;
+  }
+
+  window.ParkMapMarkers = { createPlaceMarker };
 })();

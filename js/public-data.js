@@ -70,7 +70,7 @@
       if (ids.has(place.id)) {
         const index = ids.get(place.id); unique[index] = mergeSameId(unique[index], place); continue;
       }
-      const duplicateIndex = unique.findIndex(existing => haversineMeters(existing, place) <= DEDUPE_METERS && namesMatch(existing, place));
+      const duplicateIndex = unique.findIndex(existing => !(String(existing.id).startsWith('osm-') && String(place.id).startsWith('osm-')) && haversineMeters(existing, place) <= DEDUPE_METERS && namesMatch(existing, place));
       if (duplicateIndex < 0) {
         ids.set(place.id, unique.length);
         unique.push({ ...place, sources: [...new Set(place.sources || [place.source])] });
@@ -98,15 +98,38 @@
   }
 
   async function fetchPlaces(lat, lng, options = {}) {
-    const osm = await osmSearch(lat, lng, options);
-    const publicPlaces = await fetchPublicPlaces({ lat, lng, radiusMeters: osm.radiusMeters, coordinateSystem: 'WGS84' });
-    const places = deduplicatePlaces([...osm.places, ...publicPlaces]);
-    const update = { lat, lng, places, radiusMeters: osm.radiusMeters, query: 'osm+public' };
-    if (places.length) {
-      options.onUpdate?.(update);
-      window.dispatchEvent(new CustomEvent('overpass:results', { detail: update }));
-    }
-    return { ...osm, places };
+    const radiusMeters = Number(options.radiusMeters) || 1000;
+    let collected = [], failures = 0, delivered = false;
+    let resolveReady, rejectReady;
+    const ready = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
+    const publish = () => {
+      const result = { lat, lng, places: deduplicatePlaces(collected), radiusMeters, isDone: false };
+      options.onUpdate?.(result);
+      if (!delivered && result.places.length) { delivered = true; resolveReady(result); }
+    };
+    const tasks = [
+      osmSearch(lat, lng, { ...options, onUpdate(update) {
+        collected = deduplicatePlaces([...collected, ...(update.places || [])]);
+        publish();
+      }}).then(result => { collected = deduplicatePlaces([...collected, ...result.places]); if (result.hasPartialFailure) failures += 1; publish(); }),
+      fetch('/api/tmap/parks?' + new URLSearchParams({ lat, lng, radius: radiusMeters }), { signal: AbortSignal.timeout(18000) })
+        .then(async response => { const payload = await response.json(); if (!response.ok) throw new Error(payload.error?.message || '공원 검색 실패'); collected = deduplicatePlaces([...collected, ...(payload.places || [])]); publish(); }),
+      fetchPublicPlaces({ lat, lng, radiusMeters, coordinateSystem: 'WGS84' }).then(places => { collected = deduplicatePlaces([...collected, ...places]); if (places.length) publish(); })
+    ];
+    // 첫 결과로 호출자를 즉시 해제하고, 나머지는 같은 검색의 onUpdate로 전달합니다.
+    void Promise.allSettled(tasks).then(settled => {
+      failures += settled.filter(result => result.status === 'rejected').length;
+      const allFailed = settled.slice(0, 2).every(result => result.status === 'rejected') && !collected.length;
+      if (allFailed) {
+        rejectReady(new Error('주변 장소 서버에 연결하지 못했습니다. 잠시 후 다시 검색해 주세요.'));
+        return;
+      }
+      const result = { places: deduplicatePlaces(collected), radiusMeters, hasPartialFailure: failures > 0, allFailed: false, isDone: true };
+      options.onUpdate?.({ ...result, lat, lng });
+      if (!delivered) resolveReady(result);
+    }).catch(error => { if (!delivered) rejectReady(error); });
+    return ready;
+
   }
 
   window.Data.registerPublicPlaceProvider = registerPublicPlaceProvider;

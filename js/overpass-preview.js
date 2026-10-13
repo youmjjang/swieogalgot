@@ -1,4 +1,12 @@
-// Overpass 검색 중에는 장소 후보를 그룹화하여 표시하고, 검색 진행 상태 및 더 넓게 검색을 지원합니다.
+// 장소 검색 진행·완료 상태를 검색 안내 문구와 연결합니다.
 (() => {
-  // overpass-preview는 기본 렌더링을 방해하지 않고 검색 이벤트 수신 시 상태를 부드럽게 연동하도록 유지합니다.
+  window.addEventListener('overpass:search-start', event => {
+    const hint = document.getElementById('locationHint');
+    if (hint && window.appState?.searchLabel) hint.textContent = `${window.appState.searchLabel} 주변 장소를 조회하고 있습니다...`;
+  });
+  window.addEventListener('overpass:search-done', event => {
+    const hint = document.getElementById('locationHint');
+    const count = window.appState?.places?.length || 0;
+    if (hint && count) hint.textContent = `${window.appState.searchLabel} 주변 장소 ${count}곳을 표시했습니다.`;
+  });
 })();

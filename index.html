@@ -7,7 +7,8 @@
   <meta name="theme-color" content="#197c68">
   <title>쉬어갈곳 - 무료 휴식공간 찾기</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="css/style.css?v=search-opt-1">
+  <link rel="stylesheet" href="css/style.css?v=uniform-place-marker-cleanup-1">
+  <link rel="stylesheet" href="css/park-map-markers.css?v=uniform-pin-1">
 </head>
 <body>
   <header class="header">
@@ -23,7 +24,7 @@
     <div class="search-box-wrapper">
       <form class="search-form" id="searchForm">
         <label class="sr-only" for="searchInput">주소 또는 장소 검색</label>
-        <input type="search" class="search-input" id="searchInput" placeholder="주소·장소 검색 (예: 서울시청)" autocomplete="off" aria-autocomplete="list" aria-controls="searchSuggestions">
+        <input type="search" class="search-input" id="searchInput" placeholder="주소·장소 검색 (예: 대전역, 탄방역, 서울시청)" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="searchSuggestions">
         <button type="submit" class="btn btn-search" id="btnSearch">검색</button>
       </form>
       <div class="search-suggestions" id="searchSuggestions" role="listbox" hidden></div>
@@ -38,13 +39,18 @@
     </nav>
     <section class="map-panel active" id="mapPanel" aria-label="휴식공간 지도">
       <div id="map" class="map-container" role="application" aria-label="OpenStreetMap 지도"></div>
+      <div class="map-marker-legend" aria-label="지도 마커 범례">
+        <span><i class="legend-dot legend-user" aria-hidden="true"></i>현재 위치</span>
+        <span><i class="legend-dot legend-place" aria-hidden="true"></i>휴식공간</span>
+      </div>
       <button type="button" class="btn btn-map-control" id="btnRecenter" aria-label="검색 위치로 지도 이동" title="검색 위치로">◎</button>
       <button type="button" class="btn btn-follow-navigation" id="btnFollowNavigation" aria-label="현재 위치 따라가기" aria-pressed="true">위치 따라가는 중</button>
+      <button type="button" class="btn btn-user-location" id="btnUserLocation" aria-label="내 위치 보기" title="내 위치">📍</button>
     </section>
     <section class="list-panel" id="listPanel" aria-label="주변 휴식공간 목록" hidden>
       <div class="results-header">
         <div><p class="eyebrow">주변에서 찾았어요</p><h2 class="results-count" id="resultsCount">휴식공간 0곳</h2></div>
-        <span class="sort-label">실제 도보거리순</span>
+        <span class="sort-label">가까운순</span>
       </div>
       <div class="places-list" id="placesList" role="list"></div>
       <div class="expand-search-container" id="expandSearchContainer" hidden>
@@ -54,7 +60,7 @@
         </button>
       </div>
       <div class="empty-state" id="emptyState" hidden><div class="empty-icon" aria-hidden="true">⌖</div><h3>주변에서 장소를 찾지 못했어요</h3><p>다른 위치를 검색하거나 '더 넓게 검색'을 눌러보세요.</p></div>
-      <p class="distance-note">도보 거리와 시간은 TMAP 보행자 경로 기준입니다. 경로를 계산할 수 없는 장소에는 직선거리 추정치를 대신 표시하지 않습니다.</p>
+      <p class="distance-note">도보 거리와 시간은 실제 상황에 따라 달라질 수 있어요.</p>
     </section>
   </main>
 
@@ -65,26 +71,29 @@
     <div class="sheet-handle" aria-hidden="true"></div>
     <header class="sheet-header"><div><p class="eyebrow">목적지</p><h2 class="sheet-title" id="sheetTitle">휴식공간</h2></div><button type="button" class="btn-close" id="btnCloseSheet" aria-label="상세 정보 닫기">×</button></header>
     <section class="nav-panel" id="navPanel" aria-label="도보 길안내" hidden>
-      <p class="nav-kicker">도보 길찾기 · TMAP Mobility</p><p class="nav-instruction" id="navInstruction">경로를 불러오는 중...</p><p class="nav-distance" id="navDistance"></p><p class="nav-remaining" id="navRemaining"></p><p class="nav-status" id="navStatus" aria-live="polite"></p>
-      <div class="nav-actions"><button type="button" class="btn btn-nav-start" id="btnStartNavigation">안내 시작</button><button type="button" class="btn btn-nav-stop" id="btnStopNavigation" hidden>안내 종료</button><button type="button" class="btn btn-nav-retry" id="btnRecalculateRoute" hidden>현재 위치에서 경로 다시 찾기</button></div>
+      <p class="nav-kicker">도보 길찾기</p><p class="nav-instruction" id="navInstruction">경로를 불러오는 중...</p><p class="nav-distance" id="navDistance"></p><p class="nav-remaining" id="navRemaining"></p><p class="nav-status" id="navStatus" aria-live="polite"></p>
+      <div class="nav-actions"><button type="button" class="btn btn-nav-preview" id="btnPreviewRoute" hidden>검색 경로로 돌아가기</button><button type="button" class="btn btn-nav-search-start" id="btnSearchRouteStart" hidden>선택한 위치에서 경로 보기</button><button type="button" class="btn btn-nav-start" id="btnStartNavigation" hidden>현재 위치에서 실시간 안내</button><button type="button" class="btn btn-nav-stop" id="btnStopNavigation" hidden>안내 종료</button><button type="button" class="btn btn-nav-retry" id="btnRecalculateRoute" hidden>현재 위치에서 경로 다시 찾기</button></div>
     </section>
     <div class="sheet-body" id="sheetBody"></div>
   </section>
 
-  <footer class="footer"><p>지도 및 장소 데이터 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap 기여자</a> · 보행 경로 <a href="https://tmapmobility.com/" target="_blank" rel="noopener noreferrer">TMAP Mobility</a></p><p class="disclaimer">공개 지도 데이터 기반 후보이며 무료 이용·개방 여부와 실제 좌석 상태를 보장하지 않습니다. 도보 경로와 시간은 라우팅 데이터 기반 예상치입니다.</p></footer>
+  <footer class="footer"><p>지도 및 장소 데이터 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap 기여자</a> · 보행 경로 <a href="https://tmapmobility.com/" target="_blank" rel="noopener noreferrer">TMAP Mobility</a></p><p class="disclaimer">의자 상태와 이용 가능 여부는 현장에서 확인해 주세요.</p></footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="js/utils.js"></script><script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/config.js"></script>
   <script src="js/user-heading.js?v=heading-1"></script>
-  <script src="js/data.js?v=search-opt-1"></script>
+  <script src="js/data.js?v=nearby-recovery-20261012f"></script>
   <script src="js/place-classification.js?v=park-candidates-3"></script>
-  <script src="js/overpass.js?v=search-opt-1"></script>
-  <script src="js/public-data.js?v=provider-adapter-2"></script>
+  <script src="js/overpass.js?v=search-repair-20261012j"></script>
+  <script src="js/public-data.js?v=progressive-search-20261012e"></script>
   <script src="js/route-candidate-preservation.js?v=preserve-candidates-2"></script>
   <script src="js/overpass-preview.js?v=grouped-parks-4"></script>
-  <script src="js/app.js?v=search-opt-1"></script>
-  <script src="js/navigation-guidance.js?v=arrival-check-1"></script>
-  <script src="js/park-results-ui.js?v=lazy-route-4"></script>
-  <script src="js/park-map-markers.js?v=heading-1"></script>
+  <script src="js/app.js?v=marker-center-20261012k"></script>
+  <script src="js/search-route-origin.js?v=local-fix-20261012"></script>
+  <script src="js/navigation-guidance.js?v=map-navigation-20261012b"></script>
+  <script src="js/park-results-ui.js?v=nearest-list-20261012i"></script>
+  <script src="js/park-map-markers.js?v=uniform-pin-1"></script>
+  <script src="js/navigation-modes.js?v=map-navigation-20261012b"></script>
 </body>
 </html>

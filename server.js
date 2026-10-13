@@ -211,6 +211,104 @@ async function handleTmapProxy(request, response) {
   }
 }
 
+
+const parkCache = new Map();
+async function handleNearbyParks(request, response) {
+  if (request.method !== 'GET') { response.writeHead(405, { Allow: 'GET' }).end(); return; }
+  const params = new URL(request.url, 'http://localhost').searchParams;
+  const lat = params.get('lat'), lng = params.get('lng'), radius = Number(params.get('radius') || 1000);
+  if (!isLatitude(lat) || !isCoordinate(lng) || !Number.isFinite(radius) || radius < 100 || radius > 2000) {
+    sendJson(response, 400, { error: { message: '검색 위치와 반경이 올바르지 않습니다.' } }); return;
+  }
+  const key = [Number(lat).toFixed(5), Number(lng).toFixed(5), radius].join(',');
+  const cached = parkCache.get(key);
+  if (cached && cached.expires > Date.now()) { sendJson(response, 200, { places: cached.places }); return; }
+  if (isRateLimited(request)) { sendJson(response, 429, { error: { message: '잠시 후 다시 검색해 주세요.' } }); return; }
+  const appKey = process.env.TMAP_APP_KEY?.trim();
+  if (!appKey) { sendJson(response, 503, { error: { message: 'TMAP 서버 키가 설정되지 않았습니다.' } }); return; }
+  try {
+    const url = new URL('https://apis.openapi.sk.com/tmap/pois/search/around');
+    url.search = new URLSearchParams({ version: '1', centerLat: String(lat), centerLon: String(lng), categories: '공원', count: '100', radius: String(Math.ceil(radius / 1000)), reqCoordType: 'WGS84GEO', resCoordType: 'WGS84GEO', sort: 'distance' });
+    const upstream = await fetch(url, { headers: { appKey, Accept: 'application/json' }, signal: AbortSignal.timeout(15000) });
+    const text = await upstream.text();
+    if (!upstream.ok) { const error = extractTmapError(text, upstream, appKey); sendJson(response, upstream.status, { error }); return; }
+    const payload = JSON.parse(text);
+    const records = payload.searchPoiInfo?.pois?.poi || [];
+    const places = (Array.isArray(records) ? records : [records]).map(poi => {
+      const validPoint = (y, x) => Number(y) > 0 && isLatitude(y) && Number(x) > 0 && isCoordinate(x);
+      const hasEntrance = validPoint(poi.frontLat, poi.frontLon);
+      const y = Number(hasEntrance ? poi.frontLat : poi.noorLat), x = Number(hasEntrance ? poi.frontLon : poi.noorLon);
+      if (!validPoint(y, x)) return null;
+      const rad = value => value * Math.PI / 180;
+      const a = Math.sin(rad(y - Number(lat)) / 2) ** 2 + Math.cos(rad(Number(lat))) * Math.cos(rad(y)) * Math.sin(rad(x - Number(lng)) / 2) ** 2;
+      if (6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) > radius) return null;
+      return { id: 'tmap-park-' + poi.id, name: String(poi.name || '이름 없는 공원'), type: '공원 · 착석시설 정보 확인 필요', category: 'park', resultGroup: 'possible', seatingStatus: 'unknown', lat: y, lng: x, source: 'TMAP 장소 검색', sources: ['TMAP 장소 검색'], details: { seating: '착석시설과 무료 이용·개방 여부는 현장 확인 필요', locationNote: hasEntrance ? '장소 데이터의 입구 좌표이며 개별 벤치 위치가 아닙니다.' : '장소 대표 좌표이며 입구·벤치 위치는 현장에서 확인 필요합니다.' } };
+    }).filter(Boolean);
+    parkCache.set(key, { places, expires: Date.now() + 300000 });
+    if (parkCache.size > 64) parkCache.delete(parkCache.keys().next().value);
+    sendJson(response, 200, { places });
+  } catch (error) { sendJson(response, 502, { error: { message: '주변 공원 검색 서버에 연결하지 못했습니다.' } }); }
+}
+
+
+const placeSearchCache = new Map(), pendingPlaceSearches = new Map();
+async function handlePlaceSearch(request, response) {
+  if (request.method !== 'GET') { response.writeHead(405, { Allow: 'GET' }).end(); return; }
+  const params = new URL(request.url, 'http://localhost').searchParams;
+  const query = String(params.get('q') || '').normalize('NFKC').trim();
+  if (!query || query.length > 80 || /[\u0000-\u001f\u007f]/.test(query)) { sendJson(response, 400, { error: { message: '검색어를 1~80자로 입력해 주세요.' } }); return; }
+  const location = isLatitude(params.get('lat')) && isCoordinate(params.get('lng')) ? { lat: Number(params.get('lat')), lng: Number(params.get('lng')) } : null;
+  const cacheKey = query + (location ? ':' + location.lat.toFixed(3) + ',' + location.lng.toFixed(3) : ':national');
+  const cached = placeSearchCache.get(cacheKey);
+  if (cached && cached.expires > Date.now()) { sendJson(response, 200, cached.payload); return; }
+  const appKey = process.env.TMAP_APP_KEY?.trim();
+  if (!appKey) { sendJson(response, 503, { error: { message: '장소 검색용 TMAP 서버 키가 설정되지 않았습니다.' } }); return; }
+  if (!pendingPlaceSearches.has(cacheKey)) {
+    if (isRateLimited(request)) { sendJson(response, 429, { error: { message: '검색 요청이 많습니다. 잠시 후 다시 검색해 주세요.' } }); return; }
+    const promise = (async () => {
+      async function fetchMatches(nearby) {
+        const url = new URL('https://apis.openapi.sk.com/tmap/pois');
+        const search = { version: '1', searchKeyword: query, searchType: 'all', searchtypCd: nearby ? 'R' : 'A', count: '200', page: '1', reqCoordType: 'WGS84GEO', resCoordType: 'WGS84GEO', multiPoint: 'N', poiGroupYn: 'N' };
+        if (nearby) Object.assign(search, { centerLat: String(location.lat), centerLon: String(location.lng), radius: '33' });
+        url.search = new URLSearchParams(search);
+        const upstream = await fetch(url, { headers: { appKey, Accept: 'application/json' }, signal: AbortSignal.timeout(12000) });
+        const text = await upstream.text();
+        if (!upstream.ok) { const error = extractTmapError(text, upstream, appKey); throw new HttpError(upstream.status, error.message); }
+        const payload = JSON.parse(text);
+        const raw = payload.searchPoiInfo?.pois?.poi || [];
+        return Array.isArray(raw) ? raw : [raw];
+      }
+      const settled = await Promise.allSettled(location ? [fetchMatches(true), fetchMatches(false)] : [fetchMatches(false)]);
+      if (settled.every(result => result.status === 'rejected')) throw settled[0].reason;
+      const raw = settled.flatMap(result => result.status === 'fulfilled' ? result.value : []);
+      const seen = new Set();
+      const results = (Array.isArray(raw) ? raw : [raw]).map(poi => {
+        const valid = (y, x) => Number(y) > 0 && isLatitude(y) && Number(x) > 0 && isCoordinate(x);
+        const entrance = valid(poi.frontLat, poi.frontLon);
+        const lat = Number(entrance ? poi.frontLat : poi.noorLat), lng = Number(entrance ? poi.frontLon : poi.noorLon);
+        if (!valid(lat, lng)) return null;
+        const id = String(poi.id || '') + ':' + String(poi.navSeq || '0');
+        if (seen.has(id)) return null;
+        seen.add(id);
+        const name = String(poi.name || query);
+        const address = [poi.upperAddrName, poi.middleAddrName, poi.lowerAddrName, poi.roadName, poi.firstBuildNo].filter(Boolean).join(' ');
+        return { id, name, label: address || name, lat, lng, type: String(poi.lowerBizName || poi.middleBizName || ''), source: 'TMAP 장소 검색' };
+      }).filter(Boolean);
+      const nearbyStatus = !location ? 'not-requested' : settled[0].status === 'fulfilled' ? 'ok' : 'failed';
+      const responsePayload = { results, nearbyStatus, rankingVersion: 2 };
+      // 주변 검색 실패는 정상 위치 결과로 저장하지 않습니다. 다음 검색에서 재시도합니다.
+      if (nearbyStatus !== 'failed') placeSearchCache.set(cacheKey, { payload: responsePayload, expires: Date.now() + 600000 });
+      if (placeSearchCache.size > 128) placeSearchCache.delete(placeSearchCache.keys().next().value);
+      return responsePayload;
+    })();
+    pendingPlaceSearches.set(cacheKey, promise);
+  }
+  const pending = pendingPlaceSearches.get(cacheKey);
+  try { sendJson(response, 200, await pending); }
+  catch (error) { sendJson(response, error instanceof HttpError ? error.statusCode : 502, { error: { message: error instanceof HttpError ? error.message : '장소 검색 서버에 연결하지 못했습니다. 다시 검색해 주세요.' } }); }
+  finally { if (pendingPlaceSearches.get(cacheKey) === pending) pendingPlaceSearches.delete(cacheKey); }
+}
+
 const server = http.createServer((request, response) => {
   let pathname;
   try {
@@ -220,6 +318,8 @@ const server = http.createServer((request, response) => {
     return;
   }
 
+  if (pathname === '/api/tmap/search') { void handlePlaceSearch(request, response); return; }
+  if (pathname === '/api/tmap/parks') { void handleNearbyParks(request, response); return; }
   if (pathname === '/api/tmap/pedestrian') {
     void handleTmapProxy(request, response);
     return;
