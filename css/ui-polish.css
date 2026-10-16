@@ -1,0 +1,126 @@
+/* 쉬엄쉬엄 공통 UI 규격: 버튼, 입력창, 카드, 아이콘의 크기와 모서리를 맞춥니다. */
+:root {
+  --control-height: 48px;
+  --control-radius: 12px;
+  --card-radius: 16px;
+  --card-padding: 16px;
+  --list-gap: 9px;
+  --place-icon-size: 42px;
+  --place-icon-font-size: 20px;
+  --card-shadow: 0 1px 5px rgba(35, 57, 49, .04);
+  --card-shadow-hover: 0 4px 14px rgba(35, 57, 49, .075);
+}
+
+/* 버튼은 공통 높이·모서리를 사용하고, 기존 색상으로 역할을 구분합니다. */
+.btn {
+  min-height: var(--control-height);
+  border-radius: var(--control-radius);
+}
+
+.btn > [aria-hidden="true"] {
+  flex: 0 0 20px;
+  width: 20px;
+  display: inline-grid;
+  place-items: center;
+}
+
+.btn-map-control {
+  width: var(--control-height);
+  min-height: var(--control-height);
+  border-radius: var(--control-radius);
+}
+
+.search-input {
+  height: var(--control-height);
+  border-radius: var(--control-radius);
+}
+
+.view-tabs {
+  border-radius: var(--control-radius);
+}
+
+.tab-btn {
+  min-height: var(--control-height);
+  border-radius: var(--control-radius);
+}
+
+.btn-expand-search {
+  min-height: var(--control-height);
+  border-radius: var(--control-radius);
+}
+
+/* 목록 카드는 여백과 얇은 그림자로 구분하고, 강조는 마우스·키보드 조작 때만 더합니다. */
+.places-list {
+  gap: var(--list-gap);
+}
+
+.place-card {
+  padding: var(--card-padding);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+}
+
+.place-card:hover,
+.place-card:focus-visible {
+  box-shadow: var(--card-shadow-hover);
+  transform: translateY(-1px);
+}
+
+.place-card:focus-visible {
+  outline: 3px solid rgba(25, 124, 104, .3);
+  outline-offset: 2px;
+}
+
+.place-kind-icon {
+  flex: 0 0 var(--place-icon-size);
+  width: var(--place-icon-size);
+  height: var(--place-icon-size);
+  border-radius: var(--control-radius);
+  font-size: var(--place-icon-font-size);
+}
+
+/* 보조·길안내 버튼도 기본 터치 크기를 유지합니다. */
+.nav-actions .btn {
+  min-height: var(--control-height);
+  border-radius: var(--control-radius);
+}
+
+button:focus-visible {
+  outline: 3px solid rgba(25, 124, 104, .3);
+  outline-offset: 2px;
+}
+
+.place-card:focus-visible {
+  outline: 3px solid rgba(25, 124, 104, .3);
+  outline-offset: 2px;
+}
+
+.search-suggestion-item:focus-visible {
+  outline: 2px solid rgba(25, 124, 104, .35);
+  outline-offset: -2px;
+}
+
+/* 전체 화면 길안내에서도 버튼 규격을 유지합니다. */
+:is(body.navigation-mode, body.search-route-mode) .nav-actions .btn {
+  min-height: var(--control-height);
+  border-radius: var(--control-radius);
+}
+
+:is(body.navigation-mode, body.search-route-mode) .btn-follow-navigation {
+  border-radius: var(--control-radius);
+}
+
+@media (max-width: 380px) {
+  :is(body.navigation-mode, body.search-route-mode) .nav-actions .btn {
+    min-height: var(--control-height);
+  }
+}
+
+/* Compact credits below content; map attribution remains visible. */
+body { padding-bottom: 0; }
+.footer { position: static; min-height: 0; max-width: 1320px; margin: 0 auto; padding: 8px 24px 12px; border: 0; background: transparent; text-align: right; }
+.footer p, .footer .disclaimer { font-size: 11px; line-height: 1.5; color: #65736d; }
+.footer a { color: #52665d; font-weight: 400; }
+@media (max-width: 540px) {
+  .footer { padding: 6px 14px 10px; }
+}

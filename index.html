@@ -5,16 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="내 주변에서 무료로 잠깐 쉴 수 있는 벤치와 쉼터를 찾아보세요.">
   <meta name="theme-color" content="#197c68">
-  <title>쉬어갈곳 - 무료 휴식공간 찾기</title>
+  <title>쉬엄쉬엄 - 무료 휴식공간 찾기</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="css/style.css?v=uniform-place-marker-cleanup-1">
   <link rel="stylesheet" href="css/park-map-markers.css?v=uniform-pin-1">
+  <link rel="stylesheet" href="css/ui-polish.css?v=compact-attribution-2">
+  <link rel="stylesheet" href="css/place-selection.css?v=selected-marker-contrast-2">
 </head>
 <body>
   <header class="header">
     <div class="brand-mark" aria-hidden="true">쉼</div>
     <div>
-      <h1 class="app-title">쉬어갈곳</h1>
+      <h1 class="app-title">쉬엄쉬엄</h1>
       <p class="app-subtitle">주변 무료 휴식공간 찾기</p>
     </div>
   </header>
@@ -77,23 +79,24 @@
     <div class="sheet-body" id="sheetBody"></div>
   </section>
 
-  <footer class="footer"><p>지도 및 장소 데이터 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap 기여자</a> · 보행 경로 <a href="https://tmapmobility.com/" target="_blank" rel="noopener noreferrer">TMAP Mobility</a></p><p class="disclaimer">의자 상태와 이용 가능 여부는 현장에서 확인해 주세요.</p></footer>
+  <footer class="footer"><p>© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> · <a href="https://tmapmobility.com/" target="_blank" rel="noopener noreferrer">TMAP</a></p><p class="disclaimer">의자 상태와 이용 가능 여부는 현장에서 확인해 주세요.</p></footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="js/utils.js"></script>
   <script src="js/config.js"></script>
   <script src="js/user-heading.js?v=heading-1"></script>
-  <script src="js/data.js?v=nearby-recovery-20261012f"></script>
-  <script src="js/place-classification.js?v=park-candidates-3"></script>
-  <script src="js/overpass.js?v=search-repair-20261012j"></script>
+  <script src="js/data.js?v=bus-stops-6"></script>
+  <script src="js/place-classification.js?v=bus-seating-6"></script>
+  <script src="js/overpass.js?v=all-bus-stops-6"></script>
   <script src="js/public-data.js?v=progressive-search-20261012e"></script>
   <script src="js/route-candidate-preservation.js?v=preserve-candidates-2"></script>
-  <script src="js/overpass-preview.js?v=grouped-parks-4"></script>
-  <script src="js/app.js?v=marker-center-20261012k"></script>
+  <script src="js/overpass-preview.js?v=partial-search-status-2"></script>
+  <script src="js/app.js?v=partial-search-status-2"></script>
   <script src="js/search-route-origin.js?v=local-fix-20261012"></script>
   <script src="js/navigation-guidance.js?v=map-navigation-20261012b"></script>
-  <script src="js/park-results-ui.js?v=nearest-list-20261012i"></script>
-  <script src="js/park-map-markers.js?v=uniform-pin-1"></script>
+  <script src="js/park-results-ui.js?v=bus-seating-6"></script>
+  <script src="js/park-map-markers.js?v=selected-marker-contrast-2"></script>
+  <script src="js/place-selection.js?v=selected-marker-contrast-2"></script>
   <script src="js/navigation-modes.js?v=map-navigation-20261012b"></script>
 </body>
 </html>

@@ -42,12 +42,13 @@ function osmElementToPlace(element) {
     }
     category = 'park';
     confirmed = false;
-  } else if (tags.highway === 'bus_stop' && tags.bench === 'yes') {
-    type = '의자 있는 버스정류장'; category = 'transit'; confirmed = true;
+  } else if (tags.highway === 'bus_stop' || (tags.public_transport === 'platform' && tags.bus === 'yes')) {
+    confirmed = tags.bench !== 'no' && hasPositiveSeating(tags);
+    type = confirmed ? '버스정류장 · 의자 확인됨'
+      : tags.bench === 'no' ? '버스정류장 · 의자 없음으로 등록됨' : '버스정류장 · 좌석 확인 필요';
+    category = 'transit';
   } else if (tags.public_transport === 'platform' && tags.bench === 'yes') {
     type = '의자 있는 대중교통 대기공간'; category = 'transit'; confirmed = true;
-  } else if (tags.highway === 'bus_stop' && (tags.shelter === 'yes' || tags.covered === 'yes')) {
-    type = '쉘터형 버스정류장'; category = 'transit'; confirmed = true;
   } else if (tags.amenity === 'bench') {
     type = '벤치'; category = 'bench'; confirmed = true;
   } else if (tags.leisure === 'gazebo') {
@@ -69,7 +70,11 @@ function osmElementToPlace(element) {
   }
 
   const details = {};
-  if (isPark) {
+  if (category === 'transit') {
+    details.seating = confirmed ? '지도 데이터에 의자가 있는 것으로 표시됨'
+      : tags.bench === 'no' ? '지도에는 의자가 없는 것으로 등록됨. 현장 정보와 다를 수 있음'
+      : '의자 정보가 등록되지 않아 현장 확인 필요';
+  } else if (isPark) {
     details.seating = '공원·녹지 후보이며 착석시설 정보는 확인 필요';
     details.locationNote = '공원 영역의 중심 좌표이며 개별 벤치·의자 위치는 현장에서 확인 필요합니다.';
   } else if (!confirmed) {

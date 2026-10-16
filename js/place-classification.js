@@ -70,7 +70,8 @@
     const place = originalConvert(element);
     if (!place) return null;
 
-    const seatingConfirmed = hasExplicitSeat(tags);
+    const seatingConfirmed = place.category === 'transit'
+      ? tags.bench !== 'no' && hasExplicitSeat(tags) : hasExplicitSeat(tags);
     if (!seatingConfirmed && (tags.amenity === 'shelter' || tags.tourism === 'picnic_site')) {
       place.type = tags.amenity === 'shelter'
         ? '쉼터 · 착석시설 정보 확인 필요'

@@ -1,12 +1,7 @@
 // Overpass: 점진적 병렬 쿼리(공원/쉼터 + 벤치/편의시설) 및 첫 결과 수신 즉시 UI 개방
 (() => {
-  const ENDPOINTS = [
-    'https://overpass-api.de/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter',
-    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
-    'https://overpass.private.coffee/api/interpreter'
-  ];
-  const DEFAULT_RADIUS = 1000, REQUEST_TIMEOUT_MS = 6_000, MAX_RESULTS = 100;
+  const OVERPASS_PROXY_ENDPOINT = '/api/overpass';
+  const DEFAULT_RADIUS = 1000, REQUEST_TIMEOUT_MS = 50_000, MAX_RESULTS = 100;
 
   // 1. 공원, 정원, 쉼터 등 주요 휴식 구역 쿼리 (응답이 빠르고 확실한 장소들)
   function buildParksAndSheltersQuery(lat, lng, radius) {
@@ -32,42 +27,60 @@ out center tags;`;
   node["bench"="yes"]${around};
   node["leisure"="picnic_table"]${around};
   node["tourism"="picnic_site"]${around};
-  node["highway"="bus_stop"]["bench"="yes"]${around};
+  nwr["highway"="bus_stop"]${around};
   node["public_transport"="platform"]["bench"="yes"]${around};
+  nwr["public_transport"="platform"]["bus"="yes"]${around};
 );
 out center tags;`;
   }
 
   const emit = (name, detail = {}) => window.dispatchEvent(new CustomEvent(name, { detail }));
 
-  async function executeSubQuery(queryName, queryText) {
-    const body = `data=${encodeURIComponent(queryText)}`;
-    for (let index = 0; index < ENDPOINTS.length; index += 1) {
-      const startedAt = performance.now();
-      const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-      let status = null;
+  async function executeSubQuery(queryName, queryType, lat, lng, radius) {
+    const query = queryType === 'parks'
+      ? buildParksAndSheltersQuery(lat, lng, radius)
+      : buildSeatingQuery(lat, lng, radius);
+    const startedAt = performance.now();
+    // Query the working server connection first; use browser connections on failure.
+    const attempts = [
+      () => fetch(OVERPASS_PROXY_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ queryType, lat, lng, radius }),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+      }),
+      () => fetch('https://overpass.private.coffee/api/interpreter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: new URLSearchParams({ data: query }).toString(),
+        signal: AbortSignal.timeout(12000)
+      }),
+      () => fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: new URLSearchParams({ data: query }).toString(),
+        signal: AbortSignal.timeout(12000)
+      })
+    ];
+    let lastError;
+    for (let index = 0; index < attempts.length; index += 1) {
+      const connection = index === 0 ? '서버 우선 조회' : '브라우저 대체 연결 ' + index;
       try {
-        const response = await fetch(ENDPOINTS[index], {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-          body,
-          signal: controller.signal
-        });
-        status = response.status;
-        if (!response.ok) throw new Error(`HTTP ${status}`);
+        const response = await attempts[index]();
+        if (!response.ok) throw new Error('HTTP ' + response.status);
         const payload = await response.json();
-        if (payload.remark && !payload.elements?.length) throw new Error('Overpass query error');
-        const places = (payload.elements || []).map(Data.osmElementToPlace).filter(Boolean);
-        console.info(`[Overpass:${queryName}] HTTP ${status}, ${Math.round(performance.now() - startedAt)}ms, ${places.length}건`);
-        return { success: true, places, endpoint: ENDPOINTS[index] };
+        if (!Array.isArray(payload.elements) || (payload.remark && !payload.elements.length)) {
+          throw new Error('Overpass 검색 응답 오류');
+        }
+        const places = payload.elements.map(Data.osmElementToPlace).filter(Boolean);
+        console.info('[Overpass:' + queryName + '] ' + connection + ', ' + Math.round(performance.now() - startedAt) + 'ms, ' + places.length + '건');
+        return { success: true, places };
       } catch (error) {
-        console.warn(`[Overpass:${queryName}] 엔드포인트 ${ENDPOINTS[index]} 실패 (${status === null ? 'HTTP 없음' : `HTTP ${status}`}, ${controller.signal.aborted ? 'timeout' : error.message || 'error'})`);
-      } finally {
-        window.clearTimeout(timeout);
+        lastError = error;
+        console.warn('[Overpass:' + queryName + '] ' + connection + ' 실패: ' + error.message);
       }
     }
-    return { success: false, places: [], error: new Error(`${queryName} 요청 실패`) };
+    return { success: false, places: [], error: lastError };
   }
 
   function distanceMeters(a, b) {
@@ -140,13 +153,14 @@ out center tags;`;
     const totalSubQueries = 2;
 
     const queries = [
-      { name: '공원·쉼터', query: buildParksAndSheltersQuery(lat, lng, radius) },
-      { name: '벤치·착석시설', query: buildSeatingQuery(lat, lng, radius) }
+      { name: '공원·쉼터', type: 'parks', query: buildParksAndSheltersQuery(lat, lng, radius) },
+      { name: '벤치·착석시설', type: 'seating', query: buildSeatingQuery(lat, lng, radius) }
     ];
 
-    // 병렬로 두 쿼리를 실행하되, 어느 하나라도 먼저 완료되면 즉시 UI에 1차 결과 전달
+    // 검색식은 클라이언트에서 서버로 보내지 않고, 서버가 허용된 형식으로 생성합니다.
+    // 병렬로 두 쿼리를 실행해 어느 하나라도 먼저 완료되면 즉시 UI에 1차 결과를 전달합니다.
     const queryPromises = queries.map(async item => {
-      const result = await executeSubQuery(item.name, item.query);
+      const result = await executeSubQuery(item.name, item.type, lat, lng, radius);
       completedCount += 1;
       if (result.success) {
         if (result.places.length > 0) {

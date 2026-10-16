@@ -1,0 +1,31 @@
+/* 목록 카드와 지도 마커에 동일한 장소 선택 상태를 표시합니다. */
+.place-card.is-selected {
+  border-color: #16836d;
+  background: #f2faf6;
+  box-shadow: 0 0 0 2px rgba(22, 131, 109, .14);
+}
+
+.place-card.is-selected .place-kind-icon {
+  color: #126451;
+  background: #dcefe7;
+}
+
+.place-marker-pin {
+  transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease, opacity .16s ease;
+}
+
+.place-marker-pin.is-selected {
+  background: #126451;
+  box-shadow: 0 0 0 4px rgba(22, 131, 109, .24), 0 3px 10px rgba(22, 45, 36, .4);
+  opacity: 1;
+  transform: rotate(-45deg) scale(1.12);
+}
+
+.place-marker-pin.is-dimmed {
+  opacity: .42;
+  transform: rotate(-45deg) scale(.86);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .place-marker-pin { transition: none; }
+}

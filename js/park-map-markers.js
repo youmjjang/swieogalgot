@@ -10,16 +10,21 @@
     return coordinate;
   }
 
-  function createPlaceMarker({ map, place, onSelect, escapeHtml, routeSummary }) {
+  function createPlaceMarker({ map, place, onSelect, escapeHtml, routeSummary, selected = false, dimmed = false }) {
     if (!map || !place) return null;
 
     const lat = parseCoordinate(place.lat, -90, 90);
     const lng = parseCoordinate(place.lng, -180, 180);
     if (lat === null || lng === null) return null;
 
+    const markerClasses = [
+      'place-marker-pin',
+      selected ? 'is-selected' : '',
+      dimmed ? 'is-dimmed' : ''
+    ].filter(Boolean).join(' ');
     const icon = L.divIcon({
       className: 'place-marker',
-      html: '<span class="place-marker-pin" aria-hidden="true"></span>',
+      html: `<span class="${markerClasses}" aria-hidden="true"></span>`,
       iconSize: [38, 44],
       iconAnchor: [19, 40]
     });
@@ -29,7 +34,7 @@
       alt: `${place.name || '휴식공간'}. 눌러 상세 정보 보기`,
       keyboard: true,
       riseOnHover: true,
-      zIndexOffset: 100
+      zIndexOffset: selected ? 400 : 100
     }).addTo(map);
 
     const summary = typeof routeSummary === 'function' ? routeSummary(place) : '';

@@ -1,4 +1,4 @@
-// 정적 파일 서버 + TMAP 보행자 경로 프록시.
+// 정적 파일 서버 + TMAP/Overpass API 프록시.
 // TMAP_APP_KEY는 서버 환경변수 또는 프로젝트 루트 .env에서만 읽고 브라우저에 전달하지 않습니다.
 const path = require('node:path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
@@ -10,11 +10,22 @@ const ROOT = __dirname;
 const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
 const PORT = Number(process.env.PORT || 3000);
 const TMAP_PEDESTRIAN_ENDPOINT = 'https://apis.openapi.sk.com/tmap/routes/pedestrian?version=1';
+const OVERPASS_ENDPOINTS = [
+  'https://overpass.private.coffee/api/interpreter',
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter'
+];
 const MAX_BODY_BYTES = 16 * 1024;
+const MAX_OVERPASS_RESPONSE_BYTES = 2 * 1024 * 1024;
+const OVERPASS_REQUEST_TIMEOUT_MS = 8000;
+const OVERPASS_CACHE_TTL_MS = 300_000;
+const MAX_OVERPASS_CACHE_ENTRIES = 24;
 const RATE_WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_CLIENT = 60;
 const MAX_REQUESTS_GLOBAL = 300;
 const rateBuckets = new Map();
+const overpassCache = new Map();
+const pendingOverpassRequests = new Map();
 const CONTENT_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -102,28 +113,195 @@ function validateTmapRequest(body) {
   };
 }
 
-function redactTmapSecret(value, appKey) {
-  let text = value == null ? '' : String(value);
-  if (appKey) text = text.split(appKey).join('[REDACTED]');
-  return text.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 500);
+function validateOverpassRequest(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new HttpError(400, '요청 본문은 JSON 객체여야 합니다.');
+  }
+  const { queryType, lat, lng, radius } = body;
+  if (queryType !== 'parks' && queryType !== 'seating') {
+    throw new HttpError(400, '지원하지 않는 주변 장소 검색 유형입니다.');
+  }
+  if (!isLatitude(lat) || !isCoordinate(lng)) {
+    throw new HttpError(400, '검색 위치 좌표가 올바르지 않습니다.');
+  }
+  const radiusMeters = Number(radius);
+  if (!Number.isInteger(radiusMeters) || radiusMeters < 100 || radiusMeters > 2000) {
+    throw new HttpError(400, '검색 반경은 100~2000m 사이의 정수여야 합니다.');
+  }
+  return { queryType, lat: Number(lat), lng: Number(lng), radiusMeters };
 }
 
-function extractTmapError(responseBody, upstream, appKey) {
-  let payload = null;
-  try { payload = JSON.parse(responseBody); } catch { /* TMAP 응답이 JSON이 아닐 수 있습니다. */ }
-  const providerError = payload?.error;
-  const rawCode = providerError && typeof providerError === 'object'
-    ? providerError.code
-    : payload?.errorCode ?? payload?.code;
-  const rawMessage = providerError && typeof providerError === 'object'
-    ? providerError.message
-    : (typeof providerError === 'string' ? providerError : payload?.message);
-  const code = redactTmapSecret(rawCode ?? '', appKey);
-  const message = redactTmapSecret(
-    rawMessage ?? responseBody ?? upstream.statusText ?? `TMAP HTTP ${upstream.status}`,
-    appKey
-  ) || `TMAP HTTP ${upstream.status}`;
-  return { code, message };
+function buildOverpassQuery({ queryType, lat, lng, radiusMeters }) {
+  const around = `(around:${radiusMeters},${lat},${lng})`;
+  if (queryType === 'parks') {
+    return `[out:json][timeout:12];\n(\n  nwr["leisure"="park"]${around};\n  nwr["landuse"="recreation_ground"]${around};\n  nwr["leisure"="garden"]${around};\n  nwr["leisure"="playground"]${around};\n  node["leisure"="gazebo"]${around};\n  nwr["amenity"="shelter"]${around};\n);\nout center tags;`;
+  }
+  return `[out:json][timeout:12];\n(\n  node["amenity"="bench"]${around};\n  node["bench"="yes"]${around};\n  node["leisure"="picnic_table"]${around};\n  node["tourism"="picnic_site"]${around};\n  nwr["highway"="bus_stop"]${around};\n  node["public_transport"="platform"]["bench"="yes"]${around};\n  nwr["public_transport"="platform"]["bus"="yes"]${around};\n);\nout center tags;`;
+}
+
+async function readLimitedResponse(response, maxBytes) {
+  const declaredLength = Number(response.headers.get('content-length') || 0);
+  if (declaredLength > maxBytes) throw new Error('Overpass response too large');
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const chunks = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > maxBytes) {
+        await reader.cancel();
+        throw new Error('Overpass response too large');
+      }
+      chunks.push(Buffer.from(value));
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return Buffer.concat(chunks, size).toString('utf8');
+}
+
+const mapFallbackCache = new Map();
+const pendingMapFallback = new Map();
+async function fetchOsmMapFallback({ lat, lng, radiusMeters }) {
+  const key = [lat, lng, radiusMeters].join(':');
+  const cached = mapFallbackCache.get(key);
+  if (cached && cached.expires > Date.now()) return cached.payload;
+  if (pendingMapFallback.has(key)) return pendingMapFallback.get(key);
+  const pending = (async () => {
+    const dy = radiusMeters / 110500;
+    const dx = radiusMeters / (110500 * Math.max(0.2, Math.cos(lat * Math.PI / 180)));
+    const bounds = [Math.max(-180,lng-dx),Math.max(-90,lat-dy),Math.min(180,lng+dx),Math.min(90,lat+dy)];
+    const mapSignal = AbortSignal.timeout(20000);
+    async function readArea(box, depth = 0) {
+    const response = await fetch('https://api.openstreetmap.org/api/0.6/map.json?bbox=' + box.map(n => n.toFixed(6)).join(','), {
+      headers: { Accept: 'application/json', 'User-Agent': 'FreeRestStopFinder/1.0 (local rest-space map; Node.js server)' },
+      signal: mapSignal
+    });
+    const text = await readLimitedResponse(response, 64 * 1024 * 1024);
+    if (response.status === 400 && /too many nodes/i.test(text) && depth < 3) {
+      const [west,south,east,north] = box;
+      const splitLongitude = (east-west)*Math.cos(lat*Math.PI/180) > north-south;
+      const midpoint = splitLongitude ? (west+east)/2 : (south+north)/2;
+      const first = splitLongitude ? [west,south,midpoint,north] : [west,south,east,midpoint];
+      const second = splitLongitude ? [midpoint,south,east,north] : [west,midpoint,east,north];
+      const a = await readArea(first,depth+1);
+      const b = await readArea(second,depth+1);
+      return { elements: [...a.elements,...b.elements] };
+    }
+    if (!response.ok) throw new Error('OSM map HTTP ' + response.status);
+    return JSON.parse(text);
+    }
+    const payload = await readArea(bounds);
+    if (!Array.isArray(payload.elements)) throw new Error('Invalid OSM map response');
+    // Emergency fallback restores point facilities; park areas still come from TMAP.
+    const elements = payload.elements.filter(item => {
+      if (item.type !== 'node' || !Number.isFinite(item.lat) || !Number.isFinite(item.lon)) return false;
+      const t = item.tags || {};
+      if (!(t.highway === 'bus_stop' || (t.public_transport === 'platform' && t.bus === 'yes') || t.amenity === 'bench' || t.bench === 'yes' || ['shelter','picnic_table'].includes(t.amenity) ||
+          ['park','garden','playground','gazebo','picnic_table'].includes(t.leisure) ||
+          t.landuse === 'recreation_ground' || t.tourism === 'picnic_site')) return false;
+      const rad = Math.PI / 180;
+      const h = Math.sin((item.lat-lat)*rad/2)**2 + Math.cos(item.lat*rad)*Math.cos(lat*rad)*Math.sin((item.lon-lng)*rad/2)**2;
+      return 6371000 * 2 * Math.atan2(Math.sqrt(h),Math.sqrt(1-h)) <= radiusMeters;
+    }).map(({type,id,lat,lon,tags}) => ({type,id,lat,lon,tags}));
+    const result = { elements, fallbackSource: 'OSM map API' };
+    mapFallbackCache.set(key, { payload: result, expires: Date.now() + 3600000 });
+    if (mapFallbackCache.size > 24) mapFallbackCache.delete(mapFallbackCache.keys().next().value);
+    return result;
+  })();
+  pendingMapFallback.set(key, pending);
+  try { return await pending; } finally { pendingMapFallback.delete(key); }
+}
+
+async function fetchOverpassElements(params) {
+  // Prefer the connection verified to return local seating data.
+  try { return await fetchOsmMapFallback(params); }
+  catch (error) { console.warn('[OSM map] Primary search failed: ' + error.message); }
+  const query = buildOverpassQuery(params);
+  let lastError = null;
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const upstream = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          Accept: 'application/json',
+          'User-Agent': 'FreeRestStopFinder/1.0 (local rest-space map; Node.js server)'
+        },
+        body: new URLSearchParams({ data: query }).toString(),
+        signal: AbortSignal.timeout(OVERPASS_REQUEST_TIMEOUT_MS)
+      });
+      if (!upstream.ok) {
+        await upstream.body?.cancel();
+        lastError = new Error(`Overpass HTTP ${upstream.status}`);
+        console.warn(`[Overpass] ${new URL(endpoint).hostname}: HTTP ${upstream.status}`);
+        continue;
+      }
+      const text = await readLimitedResponse(upstream, MAX_OVERPASS_RESPONSE_BYTES);
+      const payload = JSON.parse(text);
+      if (payload.remark && !payload.elements?.length) throw new Error('Overpass query error');
+      if (!Array.isArray(payload.elements)) throw new Error('Invalid Overpass response');
+      return { elements: payload.elements };
+    } catch (error) {
+      lastError = error;
+      console.warn(`[Overpass] ${new URL(endpoint).hostname}: ${error.name || "Error"}`);
+    }
+  }
+  throw lastError || new Error('No place data server available');
+}
+
+async function handleOverpassProxy(request, response) {
+  if (request.method !== 'POST') {
+    response.writeHead(405, { Allow: 'POST', 'Cache-Control': 'no-store' }).end('Method Not Allowed');
+    return;
+  }
+  if (!String(request.headers['content-type'] || '').toLowerCase().includes('application/json')) {
+    sendJson(response, 415, { error: { message: 'Content-Type은 application/json이어야 합니다.' } });
+    return;
+  }
+
+  try {
+    const params = validateOverpassRequest(await readJsonBody(request));
+    const key = `${params.queryType}:${params.lat.toFixed(6)}:${params.lng.toFixed(6)}:${params.radiusMeters}`;
+    const cached = overpassCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) {
+      sendJson(response, 200, cached.payload);
+      return;
+    }
+    if (isRateLimited(request)) {
+      sendJson(response, 429, { error: { message: '주변 검색 요청이 많습니다. 잠시 후 다시 시도해 주세요.' } });
+      return;
+    }
+
+    let pending = pendingOverpassRequests.get(key);
+    if (!pending) {
+      pending = fetchOverpassElements(params).then(payload => {
+        overpassCache.set(key, { payload, expiresAt: Date.now() + OVERPASS_CACHE_TTL_MS });
+        if (overpassCache.size > MAX_OVERPASS_CACHE_ENTRIES) overpassCache.delete(overpassCache.keys().next().value);
+        return payload;
+      });
+      pendingOverpassRequests.set(key, pending);
+    }
+    try {
+      sendJson(response, 200, await pending);
+    } finally {
+      if (pendingOverpassRequests.get(key) === pending) pendingOverpassRequests.delete(key);
+    }
+  } catch (error) {
+    if (response.headersSent || response.destroyed) return;
+    if (error instanceof HttpError) {
+      sendJson(response, error.statusCode, { error: { message: error.message } });
+      return;
+    }
+    console.warn('[Overpass] 허용된 서버에서 검색 결과를 받지 못했습니다.');
+    const statusCode = error.name === 'TimeoutError' || error.name === 'AbortError' ? 504 : 502;
+    sendJson(response, statusCode, {
+      error: { message: '주변 장소 데이터 서버에 연결하지 못했습니다. 잠시 후 다시 검색해 주세요.' }
+    });
+  }
 }
 
 async function readJsonBody(request) {
@@ -318,6 +496,7 @@ const server = http.createServer((request, response) => {
     return;
   }
 
+  if (pathname === '/api/overpass') { void handleOverpassProxy(request, response); return; }
   if (pathname === '/api/tmap/search') { void handlePlaceSearch(request, response); return; }
   if (pathname === '/api/tmap/parks') { void handleNearbyParks(request, response); return; }
   if (pathname === '/api/tmap/pedestrian') {
@@ -363,7 +542,7 @@ const server = http.createServer((request, response) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`쉬어갈곳 서버: http://${HOST}:${PORT}`);
+  console.log(`쉬엄쉬엄 서버: http://${HOST}:${PORT}`);
   console.log(`TMAP 프록시: ${process.env.TMAP_APP_KEY?.trim() ? '서버 키 설정됨' : '.env의 TMAP_APP_KEY 미설정'}`);
 });
 
@@ -378,4 +557,28 @@ function gracefulShutdown() {
   for (const signal of ['SIGINT', 'SIGTERM']) {
     process.on(signal, () => server.close(() => process.exit(0)));
   }
+}
+
+function redactTmapSecret(value, appKey) {
+  let text = value == null ? '' : String(value);
+  if (appKey) text = text.split(appKey).join('[REDACTED]');
+  return text.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 500);
+}
+
+function extractTmapError(responseBody, upstream, appKey) {
+  let payload = null;
+  try { payload = JSON.parse(responseBody); } catch { /* TMAP 응답이 JSON이 아닐 수 있습니다. */ }
+  const providerError = payload?.error;
+  const rawCode = providerError && typeof providerError === 'object'
+    ? providerError.code
+    : payload?.errorCode ?? payload?.code;
+  const rawMessage = providerError && typeof providerError === 'object'
+    ? providerError.message
+    : (typeof providerError === 'string' ? providerError : payload?.message);
+  const code = redactTmapSecret(rawCode ?? '', appKey);
+  const message = redactTmapSecret(
+    rawMessage ?? responseBody ?? upstream.statusText ?? `TMAP HTTP ${upstream.status}`,
+    appKey
+  ) || `TMAP HTTP ${upstream.status}`;
+  return { code, message };
 }

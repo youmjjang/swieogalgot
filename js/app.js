@@ -321,6 +321,7 @@ function acceptPlaceUpdate(update, token, preserveExisting) {
   appState.currentRadius = update.radiusMeters || appState.currentRadius;
   appState.isSearching = !update.isDone && !appState.places.length;
   appState.backgroundSearching = !update.isDone;
+  if (update.isDone) appState.searchPartialFailure = Boolean(update.hasPartialFailure);
   elements.mainContent.hidden = false;
   elements.listPanel.hidden = false;
   renderPlaces();
@@ -328,6 +329,10 @@ function acceptPlaceUpdate(update, token, preserveExisting) {
   if (appState.places.length) {
     Utils.setLoading(false);
     elements.locationHint.textContent = `${appState.searchLabel} 주변 장소 ${appState.places.length}곳을 표시했습니다.${update.isDone ? '' : ' 추가 장소를 확인하고 있어요.'}`;
+    if (update.isDone && update.hasPartialFailure) {
+      elements.locationHint.textContent += ' 일부 장소 데이터 조회에 실패해 결과가 빠질 수 있어요.';
+      Utils.showToast('일부 장소 데이터를 불러오지 못했어요. 잠시 후 다시 검색해 주세요.');
+    }
     const pending = appState.places.filter(place => !appState.enrichedPlaceIds.has(place.id)).slice(0, Math.max(0, 12 - appState.enrichedPlaceIds.size));
     pending.forEach(place => appState.enrichedPlaceIds.add(place.id));
     if (pending.length) void enrichWalkingRoutes(token, pending, { ...appState.searchOrigin });
@@ -347,6 +352,7 @@ async function searchAndDisplayPlaces(lat, lng, label = '선택한 위치', accu
   appState.enrichedPlaceIds = new Set();
   appState.searchOriginKind = options.originKind || (useGps ? 'gps' : 'address');
   appState.searchError = null;
+  appState.searchPartialFailure = false;
   if (useGps) {
     appState.userLocation = { lat: latitude, lng: longitude, name: '내 위치' };
     appState.userLocationAccuracy = accuracy;
@@ -450,7 +456,7 @@ async function enrichWalkingRoutes(token, places, origin) {
     appState.places = appState.places.map(place => byId.get(place.id) || place);
     renderPlaces();
     renderMarkers();
-    if (!appState.backgroundSearching) elements.locationHint.textContent = `${appState.searchLabel} 주변 장소를 표시했어요.`;
+    if (!appState.backgroundSearching && !appState.searchPartialFailure) elements.locationHint.textContent = `${appState.searchLabel} 주변 장소를 표시했어요.`;
   } catch (error) {
     console.warn('주변 장소 경로 계산 실패:', error.message);
   }
@@ -644,6 +650,8 @@ function closePlaceDetail() {
   appState.routeToken += 1;
   if (appState.routeLine) { appState.routeLine.remove(); appState.routeLine = null; }
   appState.routeInfo = null;
+  renderPlaces();
+  renderMarkers();
   updateNavigationControls();
 }
 
