@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title">
+  <title id="title">쉬엄쉬엄 휴식공간 로고</title>
+  <defs>
+    <linearGradient id="pin" x1="18" y1="12" x2="76" y2="78" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#36a887"/>
+      <stop offset="1" stop-color="#126451"/>
+    </linearGradient>
+    <filter id="shadow" x="3" y="2" width="90" height="96" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#164b3e" flood-opacity=".18"/>
+    </filter>
+  </defs>
+  <path d="M48 5.5c-21.3 0-38.5 17.2-38.5 38.4 0 25.7 32.5 46.7 36.2 49a4 4 0 0 0 4.6 0c3.7-2.3 36.2-23.3 36.2-49C86.5 22.7 69.3 5.5 48 5.5Z" fill="url(#pin)" filter="url(#shadow)"/>
+  <circle cx="48" cy="42" r="25.5" fill="#f4fbf7"/>
+  <g fill="none" stroke="#176d5b" stroke-linecap="round" stroke-linejoin="round" stroke-width="4">
+    <path d="M31 40h33M34 40v9m27-9v9M29 50h38M34 50v8m28-8v8"/>
+    <circle cx="42" cy="29.5" r="4.3" fill="#e47b42" stroke="none"/>
+    <path d="m43 35 5 6 8 1m-11-5-7 5m10-1-5 8 9 1m-4-9 8 5"/>
+  </g>
+  <path d="M23 68c7 4 16 6 25 6s18-2 25-6" fill="none" stroke="#b6dfce" stroke-linecap="round" stroke-width="2.5"/>
+</svg>
