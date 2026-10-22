@@ -256,7 +256,7 @@ function chooseSuggestion(index) {
 
 async function requestPlaceSuggestions() {
   const query = elements.searchInput.value.trim();
-  if (!query || appState.composingSearch) return;
+  if (!query) return;
   hideSuggestions();
   const token = ++appState.suggestionToken;
   const controller = new AbortController();
@@ -288,8 +288,9 @@ async function submitAddressSearch() {
 
 function schedulePlaceSuggestions() {
   hideSuggestions();
-  if (appState.composingSearch || elements.searchInput.value.trim().length < 2) return;
-  appState.suggestionDebounceTimer = window.setTimeout(() => void requestPlaceSuggestions(), 650);
+  if (elements.searchInput.value.trim().length < 2) return;
+  showSuggestionMessage('장소를 찾는 중...', 'suggestion-loading');
+  appState.suggestionDebounceTimer = window.setTimeout(() => void requestPlaceSuggestions(), 250);
 }
 
 function chooseSuggestionFromResult(result) {
@@ -1020,7 +1021,7 @@ function setupEventListeners() {
     if (place) showPlaceDetail(place);
   });
   elements.searchInput.addEventListener('input', schedulePlaceSuggestions);
-  elements.searchInput.addEventListener('compositionstart', () => { appState.composingSearch = true; hideSuggestions(); });
+  elements.searchInput.addEventListener('compositionstart', () => { appState.composingSearch = true; });
   elements.searchInput.addEventListener('compositionend', () => { appState.composingSearch = false; schedulePlaceSuggestions(); });
   elements.searchInput.addEventListener('focus', schedulePlaceSuggestions);
   elements.searchInput.addEventListener('keydown', event => {

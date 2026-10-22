@@ -1,5 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
 
+@font-face {
+  font-family: 'Cafe24Surround';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2105_2@1.0/Cafe24Ssurround.woff') format('woff');
+  font-weight: 400;
+  font-display: swap;
+}
 :root {
   color-scheme: light;
   --ink: #20332f;
@@ -27,7 +33,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .header { height: 76px; padding: 0 max(20px, calc((100vw - 1320px) / 2)); display: flex; align-items: center; gap: 12px; background: var(--white); border-bottom: 1px solid var(--line); }
 .brand-mark { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 14px; color: white; background: var(--green); font-weight: 700; }
 .brand-logo { flex: 0 0 44px; width: 44px; height: 44px; display: block; object-fit: contain; border-radius: 11px; }
-.app-title { margin: 0; font-size: 19px; letter-spacing: -.04em; }
+.app-title { margin: 0; font-family: 'Cafe24Surround', 'Noto Sans KR', sans-serif; font-weight: 400; font-size: 23px; letter-spacing: -.02em; }
 .app-subtitle { margin: 1px 0 0; color: var(--muted); font-size: 12px; }
 
 .location-section { position: relative; z-index: 100; max-width: 1320px; margin: 24px auto 0; padding: 0 24px; display: grid; grid-template-columns: auto minmax(180px, 1fr); gap: 10px; }

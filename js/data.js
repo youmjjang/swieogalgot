@@ -107,7 +107,14 @@ function rankPlaceSearchResults(results, query, biasLocation = null) {
   const hasLocation = biasLocation && Number.isFinite(biasLocation.lat) && Number.isFinite(biasLocation.lng);
   return results.map((item, index) => {
     const name = normalize(item.name), address = normalize(item.label);
-    const relevance = name === keyword ? 0 : name.startsWith(keyword) ? 1 : name.includes(keyword) ? 2 : address.includes(keyword) ? 3 : 4;
+    // '대전시청역'은 '시청역[대전1호선]'의 지역명 포함 검색으로 취급합니다.
+    // 실제 역에만 적용하여 주변 상점이나 출구를 역 자체로 오인하지 않습니다.
+    const region = normalize(String(item.label || '').trim().split(/\s+/)[0])
+      .replace(/특별자치시$|특별자치도$|특별시$|광역시$/, '');
+    const lineRegion = String(item.name || '').match(/\[([^\]0-9]+)[0-9]/)?.[1];
+    const stationMatch = item.type === '지하철역' && keyword.endsWith('역') &&
+      [region, normalize(lineRegion)].some(prefix => prefix && prefix + name === keyword);
+    const relevance = name === keyword || stationMatch ? 0 : name.startsWith(keyword) ? 1 : name.includes(keyword) ? 2 : address.includes(keyword) ? 3 : 4;
     const distanceMeters = hasLocation ? haversineMeters([biasLocation.lat, biasLocation.lng], [item.lat, item.lng]) : null;
     return { ...item, relevance, originalIndex: index, distanceMeters, distanceText: distanceMeters == null ? '' : formatRouteDistance(distanceMeters) };
   }).sort((a, b) => a.relevance - b.relevance || (hasLocation ? a.distanceMeters - b.distanceMeters : 0) || a.originalIndex - b.originalIndex)
