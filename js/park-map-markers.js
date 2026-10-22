@@ -22,11 +22,12 @@
       selected ? 'is-selected' : '',
       dimmed ? 'is-dimmed' : ''
     ].filter(Boolean).join(' ');
+    const pinImage = place.category === 'transit' ? '/images/pin-bus-stop.png' : '/images/pin-bench.png';
     const icon = L.divIcon({
       className: 'place-marker',
-      html: `<span class="${markerClasses}" aria-hidden="true"></span>`,
-      iconSize: [38, 44],
-      iconAnchor: [19, 40]
+      html: `<img class="${markerClasses}" src="${pinImage}" alt="" aria-hidden="true" draggable="false">`,
+      iconSize: [48, 52],
+      iconAnchor: [26, 48]
     });
     const marker = L.marker([lat, lng], {
       icon,
