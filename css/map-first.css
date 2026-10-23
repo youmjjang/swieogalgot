@@ -37,3 +37,12 @@ body.map-first { height: 100dvh; min-height: 0; overflow: hidden; display: flex;
 .map-first .map-panel:not(.active) { display: none; }
 .map-first .location-section { min-width: 0; }
 .map-first .search-input { font-size: 16px; }
+
+/* 검색 아래 안내와 위치 버튼을 한 줄에 정렬합니다. */
+.map-first .location-section { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.map-first .search-box-wrapper { grid-column: 1 / -1; grid-row: 1; }
+.map-first .location-hint { grid-column: 1; grid-row: 2; width: 100%; min-width: 0; margin: 0; min-height: 40px; display: flex; align-items: center; padding: 6px 10px; font-size: 11px; line-height: 1.35; }
+.map-first .btn-primary { grid-column: 2; grid-row: 2; align-self: stretch; justify-self: end; margin: 0; min-height: 40px; padding: 0 12px; font-size: 12px; white-space: nowrap; }
+.map-first .view-tabs { left: 12px; transform: none; width: min(240px, calc(100% - 88px)); padding: 4px; border-radius: 14px; }
+.map-first .tab-btn { min-height: 38px; font-size: 13px; }
+.map-first .btn-map-control { bottom: max(22px, env(safe-area-inset-bottom)); }
