@@ -33,8 +33,19 @@
     const lat = parseCoordinate(place?.lat, -90, 90);
     const lng = parseCoordinate(place?.lng, -180, 180);
     if (lat === null || lng === null) return;
-    if (!map.getBounds().contains([lat, lng])) map.panTo([lat, lng], { animate: true, duration: 0.35 });
+    const bounds = map.getContainer().getBoundingClientRect();
+    const search = document.querySelector('.location-section').getBoundingClientRect();
+    const panel = document.getElementById('listPanel');
+    const top = Math.max(0, search.bottom - bounds.top + 20);
+    const bottom = panel.classList.contains('active') ? Math.min(bounds.height, panel.getBoundingClientRect().top - bounds.top) : bounds.height;
+    const targetY = top + Math.max(40, bottom - top) / 2;
+    const zoom = Math.max(17, map.getZoom());
+    const point = map.project([lat, lng], zoom);
+    const center = point.add([0, bounds.height / 2 - targetY]);
+    map.setView(map.unproject(center, zoom), zoom, { animate: true, duration: .35 });
   }
+
+  window.focusSelectedPlace = focusMapIfNeeded;
 
   function refreshSelection(place, source) {
     window.app?.renderPlaces?.();

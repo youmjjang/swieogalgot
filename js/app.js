@@ -736,7 +736,8 @@ async function loadSearchOriginRoute(place, token) {
     elements.navDistance.textContent = `${Data.formatRouteDistance(route.distanceMeters)} · 약 ${Data.formatRouteDuration(route.durationSeconds)}`;
     elements.navRemaining.textContent = '';
     elements.navStatus.textContent = '';
-    if (appState.map && appState.routeLine) appState.map.fitBounds(appState.routeLine.getBounds().pad(0.18), { maxZoom: 17 });
+    if (window.focusSelectedPlace && document.body.classList.contains('place-detail-open')) window.focusSelectedPlace(place);
+    else if (appState.map && appState.routeLine) appState.map.fitBounds(appState.routeLine.getBounds().pad(0.18), { maxZoom: 17 });
     updateNavigationControls();
   } catch (error) {
     if (token !== appState.routeToken || appState.selectedPlace?.id !== place.id) return;
