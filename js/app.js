@@ -188,15 +188,29 @@ async function focusMapOnLocation(latitude, longitude, zoom = 15, searchToken = 
 }
 
 function getAccurateCurrentPosition() {
-  return new Promise((resolve, reject) => {
+  const requestPosition = options => new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
-      reject(new Error('이 브라우저에서는 현재 위치를 사용할 수 없습니다.'));
+      reject(new Error('이 브라우저에서는 현재 위치를 사용할 수 없어요. 주소·장소를 검색해 주세요.'));
       return;
     }
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true, timeout: 18000, maximumAge: 1000
-    });
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
   });
+  const locationError = error => {
+    const message = error.code === 1
+      ? '위치 권한이 꺼져 있어요. 브라우저와 기기의 위치 권한을 허용한 뒤 다시 눌러 주세요.'
+      : '현재 위치를 받지 못했어요. 기기의 위치 서비스를 켜고 다시 시도해 주세요. 계속 안 되면 다른 브라우저에서 열어 주세요.';
+    return Object.assign(new Error(message), { code: error.code });
+  };
+  return requestPosition({ enableHighAccuracy: true, timeout: 8000, maximumAge: 1000 })
+    .catch(async error => {
+      if (error.code === 1 || !navigator.geolocation) throw locationError(error);
+      try {
+        // GPS가 잡히지 않는 환경에서는 네트워크 기반 위치도 요청합니다.
+        return await requestPosition({ enableHighAccuracy: false, timeout: 8000, maximumAge: 30000 });
+      } catch (fallbackError) {
+        throw locationError(fallbackError);
+      }
+    });
 }
 
 function getSearchRouteOrigin() {
@@ -380,7 +394,7 @@ async function searchAndDisplayPlaces(lat, lng, label = '선택한 위치', accu
   renderPlaces();
   renderMarkers();
   if (useGps) {
-    const focused = await focusMapOnLocation(latitude, longitude, 15, token);
+    const focused = await focusMapOnLocation(latitude, longitude, 17, token);
     if (token !== appState.searchToken) return;
     if (!focused) {
       const message = '지도를 표시할 수 없어 현재 위치 검색을 중단했습니다. 화면을 다시 연 뒤 재시도해 주세요.';
@@ -882,7 +896,8 @@ async function startNavigation() {
   const place = appState.selectedPlace;
   if (!place) { Utils.showToast('먼저 목적지를 선택해 주세요.', 'error'); return; }
   if (!navigator.geolocation) { Utils.showToast('이 브라우저에서는 GPS 실시간 안내를 사용할 수 없습니다.', 'error'); return; }
-  if (appState.navigationActive) return;
+  if (appState.navigationActive || elements.btnStartNavigation.disabled) return;
+  elements.btnStartNavigation.disabled = true;
   const token = ++appState.routeToken;
   Utils.setLoading(true, '현재 위치에서 길을 찾는 중...');
   try {
@@ -927,6 +942,7 @@ async function startNavigation() {
     Utils.showToast(elements.navStatus.textContent, 'error');
     updateNavigationControls();
   } finally {
+    elements.btnStartNavigation.disabled = false;
     Utils.setLoading(false);
   }
 }
@@ -1085,17 +1101,36 @@ function updateSuggestionHighlight(items) {
   });
 }
 
+// 위치 응답보다 사용자의 직접 검색이 먼저 시작됐다면 그 검색을 유지합니다.
+async function locateOnArrival() {
+  const token = appState.searchToken;
+  if (!navigator.geolocation) {
+    elements.locationHint.textContent = '현재 위치를 사용할 수 없어요. 주소·장소를 검색해 주세요.';
+    return;
+  }
+  try {
+    const position = await getAccurateCurrentPosition();
+    if (token !== appState.searchToken || appState.searchOrigin) return;
+    const { latitude, longitude, accuracy } = position.coords;
+    await searchAndDisplayPlaces(latitude, longitude, '내 위치', accuracy, 1000, true);
+  } catch (error) {
+    if (token !== appState.searchToken || appState.searchOrigin) return;
+    elements.locationHint.textContent = error.code === 1
+      ? '위치를 허용하면 내 주변을 볼 수 있어요. 주소·장소로도 검색할 수 있어요.'
+      : '현재 위치를 찾지 못했어요. 내 위치 버튼을 다시 누르거나 장소를 검색해 주세요.';
+  }
+}
+
 function initializeApp() {
+  elements.mainContent.hidden = false;
   initializeMap();
   setupEventListeners();
-  // 이미 허용된 위치 권한만 사용해 검색 순위 기준을 갱신합니다.
-  navigator.permissions?.query({ name: "geolocation" }).then(permission => {
-    if (permission.state === "granted") startUserLocationWatch();
-  }).catch(() => {});
   elements.listPanel.hidden = false;
   elements.navPanel.hidden = true;
   setView('map');
   updateNavigationControls();
+  invalidateVisibleMap();
+  void locateOnArrival();
 }
 
 document.addEventListener('DOMContentLoaded', initializeApp, { once: true });

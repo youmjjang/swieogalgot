@@ -11,12 +11,12 @@
 }
 
 .place-marker-pin {
-  transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease, opacity .16s ease;
+  transition: transform .16s ease, opacity .16s ease;
 }
 
 .place-marker-pin.is-selected {
-  background: #126451;
-  box-shadow: 0 0 0 4px rgba(22, 131, 109, .24), 0 3px 10px rgba(22, 45, 36, .4);
+  background: transparent;
+  box-shadow: none;
   opacity: 1;
   transform: scale(1.18);
 }

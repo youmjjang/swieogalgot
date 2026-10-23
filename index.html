@@ -10,12 +10,13 @@
   <link rel="stylesheet" href="css/style.css?v=local-font-preview-2">
   <link rel="stylesheet" href="css/park-map-markers.css?v=custom-pins-2">
   <link rel="stylesheet" href="css/ui-polish.css?v=compact-attribution-2">
-  <link rel="stylesheet" href="css/place-selection.css?v=custom-pins-2">
+  <link rel="stylesheet" href="css/place-selection.css?v=transparent-pin-selection-1">
+  <link rel="stylesheet" href="css/map-first.css?v=1">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/app-icon-32.png?v=mascot-1">
   <link rel="apple-touch-icon" sizes="180x180" href="/images/app-icon-180.png?v=mascot-1">
   <link rel="manifest" href="/manifest.webmanifest">
 </head>
-<body>
+<body class="map-first">
   <header class="header">
     <img class="brand-logo" src="images/app-icon-192.png?v=mascot-1" alt="" aria-hidden="true">
     <div>
@@ -34,10 +35,10 @@
       </form>
       <div class="search-suggestions" id="searchSuggestions" role="listbox" hidden></div>
     </div>
-    <p class="location-hint" id="locationHint">현재 위치를 사용하거나 주소·장소를 검색하세요.</p>
+    <p class="location-hint" id="locationHint">지도를 보며 현재 위치를 확인하고 있어요.</p>
   </section>
 
-  <main class="main-content" id="mainContent" hidden>
+  <main class="main-content" id="mainContent">
     <nav class="view-tabs" role="tablist" aria-label="결과 보기">
       <button type="button" class="tab-btn active" id="tabMap" role="tab" aria-selected="true">지도</button>
       <button type="button" class="tab-btn" id="tabList" role="tab" aria-selected="false">목록 <span id="tabCount"></span></button>
@@ -94,7 +95,7 @@
   <script src="js/public-data.js?v=progressive-search-20261012e"></script>
   <script src="js/route-candidate-preservation.js?v=preserve-candidates-2"></script>
   <script src="js/overpass-preview.js?v=partial-search-status-2"></script>
-  <script src="js/app.js?v=live-suggestions-1"></script>
+  <script src="js/app.js?v=map-first-1"></script>
   <script src="js/search-route-origin.js?v=local-fix-20261012"></script>
   <script src="js/navigation-guidance.js?v=map-navigation-20261012b"></script>
   <script src="js/park-results-ui.js?v=bus-seating-6"></script>

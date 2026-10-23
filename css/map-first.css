@@ -1,0 +1,24 @@
+/* 지도를 먼저 보여주고 검색과 보기 전환을 지도 위에 배치합니다. */
+.map-first { padding-bottom: 0; }
+.map-first .header { height: 64px; }
+.map-first .main-content { position: relative; max-width: none; margin: 0; padding: 0; }
+.map-first .map-panel { height: calc(100dvh - 64px); min-height: 400px; border: 0; border-radius: 0; box-shadow: none; }
+.map-first .location-section { position: absolute; top: 78px; left: 16px; right: 16px; margin: 0 auto; padding: 0; max-width: 720px; grid-template-columns: auto minmax(0, 1fr); }
+.map-first .search-form { padding: 5px; gap: 4px; border-radius: 20px; background: white; box-shadow: 0 4px 20px #20332f24; }
+.map-first .search-input { border: 0; background: transparent; }
+.map-first .btn-primary { align-self: start; margin-top: 5px; }
+.map-first .location-hint { width: fit-content; max-width: 100%; padding: 7px 12px; border-radius: 12px; color: #344a42; background: #fffffff0; box-shadow: 0 2px 10px #20332f12; }
+.map-first .view-tabs { position: absolute; z-index: 600; bottom: 30px; left: 50%; transform: translateX(-50%); width: min(320px, calc(100% - 120px)); margin: 0; box-shadow: 0 5px 24px #20332f26; }
+.map-first .leaflet-top { top: 150px; }
+.map-first .list-panel { padding: 150px 20px 110px; max-height: calc(100dvh - 64px); overflow: auto; background: var(--paper); }
+.map-first .footer { display: none; }
+.map-first .loading-overlay { inset: auto 16px 100px; width: fit-content; max-width: calc(100% - 32px); margin: auto; padding: 12px 18px; border-radius: 16px; flex-direction: row; gap: 12px; background: #fffffff5; box-shadow: 0 4px 20px #20332f26; pointer-events: none; }
+.map-first .loading-overlay .spinner { width: 22px; height: 22px; }
+.map-first .loading-overlay p { margin: 0; font-size: 13px; }
+@media (max-width: 600px) {
+  .map-first .location-section { top: 76px; left: 12px; right: 12px; grid-template-columns: minmax(0, 1fr) auto; }
+  .map-first .search-box-wrapper { grid-column: 1; grid-row: 1; }
+  .map-first .btn-primary { grid-column: 2; grid-row: 1; padding: 0 12px; font-size: 12px; }
+  .map-first .search-input { padding: 0 8px; font-size: 13px; }
+  .map-first .btn-search { min-width: 48px; padding: 0 10px; }
+}
