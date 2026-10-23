@@ -128,3 +128,10 @@ body.map-first .detail-value { max-width: 72%; font-size: 12px; line-height: 1.6
 body.map-first .btn-nav-stop { background: #fff0ec; border-color: #f3d9d1; color: #a84f43; }
 body.map-first .btn-nav-stop:hover { background: #fbe5de; }
 body.map-first .btn-nav-stop:active { background: #f6d9d0; }
+
+/* 지도 공간을 넓히는 스크롤 반응형 로고 영역 */
+body.map-first .header { height: 64px; min-height: 0; flex-basis: 64px; overflow: hidden; transition: flex-basis .22s ease, height .22s ease, opacity .18s ease; }
+body.map-first .location-section { transition: top .22s ease; }
+body.map-first.header-collapsed .header { height: 0; flex-basis: 0; opacity: 0; border-bottom: 0; visibility: hidden; }
+body.map-first.header-collapsed .location-section { top: 12px; }
+@media (prefers-reduced-motion: reduce) { body.map-first .header, body.map-first .location-section { transition: none; } }
