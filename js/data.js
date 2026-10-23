@@ -114,9 +114,13 @@ function rankPlaceSearchResults(results, query, biasLocation = null) {
     const lineRegion = String(item.name || '').match(/\[([^\]0-9]+)[0-9]/)?.[1];
     const stationMatch = item.type === '지하철역' && keyword.endsWith('역') &&
       [region, normalize(lineRegion)].some(prefix => prefix && prefix + name === keyword);
-    const relevance = name === keyword || stationMatch ? 0 : name.startsWith(keyword) ? 1 : name.includes(keyword) ? 2 : address.includes(keyword) ? 3 : 4;
+    const areaType = String(item.type || '').replace(/[^가-힣]/g, '');
+    const isArea = /^(읍면동|시군구|행정동|법정동|읍|면|동|리|시|군|구)$/.test(areaType);
+    const areaMatch = isArea && /(?:동|읍|면|리|구|군|시)$/.test(keyword) &&
+      (name === keyword || name.endsWith(keyword) || address.endsWith(keyword));
+    const relevance = areaMatch ? -1 : name === keyword || stationMatch ? 0 : name.startsWith(keyword) ? 1 : name.includes(keyword) ? 2 : address.includes(keyword) ? 3 : 4;
     const distanceMeters = hasLocation ? haversineMeters([biasLocation.lat, biasLocation.lng], [item.lat, item.lng]) : null;
-    return { ...item, relevance, originalIndex: index, distanceMeters, distanceText: distanceMeters == null ? '' : formatRouteDistance(distanceMeters) };
+    return { ...item, areaMatch, relevance, originalIndex: index, distanceMeters, distanceText: distanceMeters == null ? '' : formatRouteDistance(distanceMeters) };
   }).sort((a, b) => a.relevance - b.relevance || (hasLocation ? a.distanceMeters - b.distanceMeters : 0) || a.originalIndex - b.originalIndex)
     .map(({ relevance, originalIndex, ...item }) => item);
 }

@@ -298,7 +298,18 @@ async function requestPlaceSuggestions() {
 async function submitAddressSearch() {
   if (appState.composingSearch) return;
   if (!elements.searchInput.value.trim()) { hideSuggestions(); elements.searchInput.focus(); return; }
+  const query = elements.searchInput.value.trim();
   await requestPlaceSuggestions();
+  if (elements.searchInput.value.trim() !== query || !isAreaSearch(query)) return;
+  const areas = appState.currentSuggestions.filter(item => item.areaMatch);
+  if (areas.length === 1) return chooseSuggestionFromResult(areas[0]);
+  elements.locationHint.textContent = areas.length > 1
+    ? '같은 이름의 지역이 있어요. 아래에서 원하는 지역을 선택해 주세요.'
+    : '해당 지역을 찾지 못했어요. 시·군·구를 함께 입력해 주세요.';
+}
+
+function isAreaSearch(query) {
+  return /^[가-힣0-9\s]+(?:동|읍|면|리|구|군|시)$/.test(query.trim());
 }
 
 function schedulePlaceSuggestions() {
@@ -1053,7 +1064,10 @@ function setupEventListeners() {
     if (event.isComposing || appState.composingSearch) return;
     const items = [...elements.searchSuggestions.querySelectorAll('.search-suggestion-item')];
     if (event.key === 'Enter' && items.length) {
-      event.preventDefault(); chooseSuggestion(appState.activeSuggestionIndex >= 0 ? appState.activeSuggestionIndex : 0); return;
+      event.preventDefault();
+      if (appState.activeSuggestionIndex < 0 && isAreaSearch(elements.searchInput.value)) void submitAddressSearch();
+      else chooseSuggestion(appState.activeSuggestionIndex >= 0 ? appState.activeSuggestionIndex : 0);
+      return;
     }
     if (event.key === 'ArrowDown' && items.length) {
       event.preventDefault(); appState.activeSuggestionIndex = (appState.activeSuggestionIndex + 1) % items.length; updateSuggestionHighlight(items);
