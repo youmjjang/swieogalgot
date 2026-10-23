@@ -33,7 +33,10 @@
   sheet.addEventListener('touchend', () => {
     const shouldClose = gesture?.dragging && gesture.distance >= 80;
     // 닫기 함수가 기존 X 버튼과 동일한 정리 작업을 수행합니다.
-    if (shouldClose) window.app.closePlaceDetail();
+    if (shouldClose) {
+      if (window.UnifiedPlacePanel) window.UnifiedPlacePanel.back('peek');
+      else window.app.closePlaceDetail();
+    }
     reset();
   });
   sheet.addEventListener('touchcancel', reset);

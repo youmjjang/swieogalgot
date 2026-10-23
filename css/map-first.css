@@ -135,3 +135,28 @@ body.map-first .location-section { transition: top .22s ease; }
 body.map-first.header-collapsed .header { height: 0; flex-basis: 0; opacity: 0; border-bottom: 0; visibility: hidden; }
 body.map-first.header-collapsed .location-section { top: 12px; }
 @media (prefers-reduced-motion: reduce) { body.map-first .header, body.map-first .location-section { transition: none; } }
+
+/* 지도 위에 겹치는 주변 장소 목록 */
+body.map-first .list-panel { top: auto; bottom: 0; z-index: 650; height: 50%; max-height: calc(100% - var(--list-top, 150px)); padding: 0; border: 1px solid #e0e8e3; border-bottom: 0; border-radius: 24px 24px 0 0; background: #fff; box-shadow: 0 -8px 30px #20332f1a; overflow: hidden; }
+body.map-first .list-panel.active { display: flex; flex-direction: column; }
+body.map-first .list-panel[data-size="expanded"] { height: calc(100% - var(--list-top, 150px)); }
+body.map-first .list-panel[data-size="peek"] { height: 170px; }
+body.map-first .list-drag-handle { flex: 0 0 30px; width: 100%; border: 0; background: transparent; display: grid; place-items: center; cursor: ns-resize; touch-action: none; }
+body.map-first .list-drag-handle span { width: 42px; height: 5px; border-radius: 10px; background: #cbd7d0; }
+body.map-first .list-drag-handle:focus-visible { outline: 2px solid #197c68; outline-offset: -4px; }
+body.map-first .list-scroll-content { flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px 90px; overscroll-behavior-y: contain; }
+body.map-first .list-panel .results-header { background: #fff; padding-top: 0; }
+body.map-first .view-tabs { z-index: 800; }
+body.map-first.list-open .map-marker-legend { display: none; }
+body.map-first.list-open .btn-map-control { bottom: calc(50% + 12px); }
+
+/* 목록과 상세는 하나의 패널 안에서 전환합니다. */
+body.map-first.place-detail-open .list-scroll-content { display: none; }
+body.map-first #listPanel > .bottom-sheet { position: static; flex: 1; min-height: 0; max-height: none; width: 100%; padding: 0 18px 24px; overflow-y: auto; transform: none; transition: none; border: 0; border-radius: 0; box-shadow: none; }
+body.map-first #listPanel > .bottom-sheet:not(.open) { display: none; }
+body.map-first #listPanel > .bottom-sheet .sheet-handle { display: none; }
+body.map-first.place-detail-open .view-tabs { display: none; }
+body.map-first.place-detail-open .sheet-backdrop { display: none; }
+body.map-first .btn-back-list { display: block; margin: 0 0 12px; padding: 5px 0; color: #197c68; background: transparent; border: 0; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+body.map-first:is(.navigation-mode, .search-route-mode) .list-panel { display: none !important; }

@@ -391,6 +391,7 @@ async function searchAndDisplayPlaces(lat, lng, label = '선택한 위치', accu
   elements.navPanel.hidden = true;
   elements.bottomSheet.hidden = true;
   elements.bottomSheet.classList.remove('open');
+  document.body.classList.remove('place-detail-open');
   elements.sheetBackdrop.hidden = true;
   elements.locationHint.textContent = `${appState.searchLabel} 주변 휴식공간을 찾고 있습니다...`;
   renderPlaces();
@@ -620,7 +621,9 @@ function setView(view) {
   elements.tabList.classList.toggle('active', !showMap);
   elements.tabMap.setAttribute('aria-selected', String(showMap));
   elements.tabList.setAttribute('aria-selected', String(!showMap));
-  elements.mapPanel.classList.toggle('active', showMap);
+  elements.mapPanel.classList.add('active');
+  document.body.classList.toggle('list-open', !showMap);
+  if (!showMap) elements.listPanel.dataset.size = 'half';
   elements.listPanel.classList.toggle('active', !showMap);
   elements.listPanel.hidden = false;
   invalidateVisibleMap();
@@ -647,8 +650,9 @@ function expandSearchRadius() {
 }
 
 function openPlaceDetailSheet() {
+  window.UnifiedPlacePanel?.open();
   elements.bottomSheet.hidden = false;
-  elements.sheetBackdrop.hidden = false;
+  elements.sheetBackdrop.hidden = true;
   requestAnimationFrame(() => elements.bottomSheet.classList.add('open'));
 }
 
@@ -656,6 +660,7 @@ function closePlaceDetail() {
   if (appState.navigationActive) return;
   window.NavigationModes?.exitSearchViewer?.();
   appState.routeViewerActive = false;
+  window.UnifiedPlacePanel?.close();
   elements.bottomSheet.classList.remove('open');
   elements.sheetBackdrop.hidden = true;
   elements.navPanel.hidden = true;

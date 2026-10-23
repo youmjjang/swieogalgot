@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="css/park-map-markers.css?v=small-pins-3">
   <link rel="stylesheet" href="css/ui-polish.css?v=compact-attribution-2">
   <link rel="stylesheet" href="css/place-selection.css?v=transparent-pin-selection-1">
-  <link rel="stylesheet" href="css/map-first.css?v=scroll-header-12">
+  <link rel="stylesheet" href="css/map-first.css?v=unified-panel-14">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/app-icon-32.png?v=mascot-1">
   <link rel="apple-touch-icon" sizes="180x180" href="/images/app-icon-180.png?v=mascot-1">
   <link rel="manifest" href="/manifest.webmanifest">
@@ -56,6 +56,8 @@
       <button type="button" class="btn btn-user-location" id="btnUserLocation" aria-label="내 위치 보기" title="내 위치">📍</button>
     </section>
     <section class="list-panel" id="listPanel" aria-label="주변 휴식공간 목록" hidden>
+      <button type="button" class="list-drag-handle" aria-label="목록 크기 변경" title="위아래로 끌어 목록 크기 변경"><span></span></button>
+      <div class="list-scroll-content">
       <div class="results-header">
         <div><p class="eyebrow">주변에서 찾았어요</p><h2 class="results-count" id="resultsCount">휴식공간 0곳</h2></div>
         <span class="sort-label">가까운순</span>
@@ -69,6 +71,7 @@
       </div>
       <div class="empty-state" id="emptyState" hidden><div class="empty-icon" aria-hidden="true">⌖</div><h3>주변에서 장소를 찾지 못했어요</h3><p>다른 위치를 검색하거나 '더 넓게 검색'을 눌러보세요.</p></div>
       <p class="distance-note">도보 거리와 시간은 실제 상황에 따라 달라질 수 있어요.</p>
+      </div>
     </section>
   </main>
 
@@ -97,14 +100,16 @@
   <script src="js/public-data.js?v=progressive-search-20261012e"></script>
   <script src="js/route-candidate-preservation.js?v=preserve-candidates-2"></script>
   <script src="js/overpass-preview.js?v=partial-search-status-2"></script>
-  <script src="js/app.js?v=no-user-popup-11"></script>
+  <script src="js/app.js?v=unified-panel-14"></script>
   <script src="js/search-route-origin.js?v=local-fix-20261012"></script>
   <script src="js/navigation-guidance.js?v=white-navigation-8"></script>
   <script src="js/park-results-ui.js?v=bus-seating-6"></script>
   <script src="js/park-map-markers.js?v=small-pins-3"></script>
   <script src="js/place-selection.js?v=custom-pins-2"></script>
   <script src="js/navigation-modes.js?v=map-navigation-20261012b"></script>
-  <script src="js/sheet-gestures.js?v=swipe-dismiss-1"></script>
-  <script src="js/scroll-header.js?v=1"></script>
+  <script src="js/sheet-gestures.js?v=unified-panel-14"></script>
+  <script src="js/scroll-header.js?v=unified-panel-14"></script>
+  <script src="js/list-sheet.js?v=1"></script>
+  <script src="js/unified-place-panel.js?v=1"></script>
 </body>
 </html>
