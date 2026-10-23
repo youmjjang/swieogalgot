@@ -33,7 +33,7 @@
 
     const inaccurate = Number.isFinite(current.accuracy) && current.accuracy > 80;
     if (inaccurate) {
-      elements.navInstruction.textContent = 'GPS 위치 정확도를 확인하는 중입니다';
+      elements.navInstruction.textContent = '현재 위치를 확인하고 있어요';
       elements.navDistance.textContent = '위치가 안정되면 안내가 갱신됩니다';
       elements.navStatus.textContent = '기기 보고 위치 오차 약 ±' + window.formatLocationAccuracy(current.accuracy);
       return;
@@ -64,7 +64,7 @@
     }
     if (!inaccurate && routePosition?.distanceMeters > 50) {
       elements.navInstruction.textContent = '경로에서 벗어났습니다';
-      elements.navDistance.textContent = '현재 위치에서 경로 다시 찾기를 눌러주세요';
+      elements.navDistance.textContent = '경로 다시 찾기를 눌러 주세요';
     }
     elements.navStatus.textContent = inaccurate
       ? `GPS 위치 오차가 클 수 있습니다 (기기 보고 약 ±${window.formatLocationAccuracy(current.accuracy)}).`

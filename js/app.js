@@ -727,9 +727,9 @@ async function loadSearchOriginRoute(place, token) {
     setRouteLine(route);
     updatePlaceRouteState(place, 'ok', null, route);
     renderRouteDetails(place, route);
-    elements.navInstruction.textContent = appState.searchOriginKind === 'gps' ? '현재 위치 기준 도보 경로입니다.' : '선택한 위치 기준 도보 경로입니다.';
+    elements.navInstruction.textContent = '도보 경로';
     elements.navDistance.textContent = `${Data.formatRouteDistance(route.distanceMeters)} · 약 ${Data.formatRouteDuration(route.durationSeconds)}`;
-    elements.navRemaining.textContent = `출발: ${origin.name || appState.searchLabel} → 도착: ${place.name}`;
+    elements.navRemaining.textContent = '';
     elements.navStatus.textContent = '';
     if (appState.map && appState.routeLine) appState.map.fitBounds(appState.routeLine.getBounds().pad(0.18), { maxZoom: 17 });
     updateNavigationControls();
@@ -822,9 +822,9 @@ async function showSearchOriginRoute() {
     setRouteLine(route);
     updatePlaceRouteState(place, 'ok', null, route);
     renderRouteDetails(place, route);
-    elements.navInstruction.textContent = '선택한 위치 기준 경로입니다.';
+    elements.navInstruction.textContent = '도보 경로';
     elements.navDistance.textContent = `${Data.formatRouteDistance(route.distanceMeters)} · 약 ${Data.formatRouteDuration(route.durationSeconds)}`;
-    elements.navRemaining.textContent = `출발: ${origin.name} → 도착: ${place.name}`;
+    elements.navRemaining.textContent = '';
     elements.navStatus.textContent = '아래 버튼을 누르면 현재 위치에서 안내를 시작해요.';
     setView('map');
     appState.routeViewerActive = true;
@@ -977,9 +977,9 @@ function stopNavigation(showMessage = true) {
   if (showMessage && wasActive) Utils.showToast('실시간 안내를 종료했습니다.');
   if (appState.selectedPlace && appState.routeInfo) {
     renderRouteDetails(appState.selectedPlace, appState.routeInfo);
-    elements.navInstruction.textContent = appState.searchOriginKind === 'gps' ? '현재 위치 검색 기준 경로입니다.' : '검색 위치 기준 경로입니다.';
+    elements.navInstruction.textContent = '도보 경로';
     elements.navDistance.textContent = `${Data.formatRouteDistance(appState.routeInfo.distanceMeters)} · 약 ${Data.formatRouteDuration(appState.routeInfo.durationSeconds)}`;
-    elements.navRemaining.textContent = `출발: ${appState.lastRouteStart?.name || appState.searchLabel} → 도착: ${appState.selectedPlace.name}`;
+    elements.navRemaining.textContent = '';
     elements.navStatus.textContent = '안내를 종료했어요.';
   }
 }
