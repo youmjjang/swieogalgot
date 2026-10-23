@@ -11,6 +11,7 @@
   let returning = false;
   window.UnifiedPlacePanel = {
     open() {
+      window.PanelHistory?.record('detail', window.appState.selectedPlace);
       if (!document.body.classList.contains('place-detail-open')) snapshot = { size: panel.dataset.size || 'half', scroll: content.scrollTop };
       document.body.classList.add('place-detail-open', 'list-open');
       panel.classList.add('active'); panel.hidden = false;

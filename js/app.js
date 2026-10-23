@@ -617,6 +617,7 @@ function renderPlaces() {
 function setView(view) {
   const showMap = view !== 'list';
   appState.view = showMap ? 'map' : 'list';
+  window.PanelHistory?.record(appState.view);
   elements.tabMap.classList.toggle('active', showMap);
   elements.tabList.classList.toggle('active', !showMap);
   elements.tabMap.setAttribute('aria-selected', String(showMap));
