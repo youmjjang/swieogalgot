@@ -24,3 +24,16 @@
   .map-first .btn-search { min-width: 56px; }
   .map-first .location-hint { grid-row: 3; font-size: 11px; }
 }
+
+/* 검색 결과 수나 모바일 주소창 높이가 바뀌어도 화면 안에 유지합니다. */
+body.map-first { height: 100dvh; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.map-first .header { flex: 0 0 64px; }
+.map-first .main-content { flex: 1 1 0; min-height: 0; width: 100%; display: block; overflow: hidden; }
+.map-first .map-panel { position: absolute; inset: 0; height: 100%; min-height: 0; }
+.map-first .map-container { min-height: 0; }
+.map-first .view-tabs { display: flex; bottom: max(22px, env(safe-area-inset-bottom)); width: min(320px, calc(100% - 96px)); }
+.map-first .list-panel { display: none; height: 100%; max-height: none; overflow-y: auto; }
+.map-first .list-panel.active { display: block; }
+.map-first .map-panel:not(.active) { display: none; }
+.map-first .location-section { min-width: 0; }
+.map-first .search-input { font-size: 16px; }

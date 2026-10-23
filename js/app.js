@@ -265,6 +265,7 @@ function chooseSuggestion(index) {
   if (!result) return;
   elements.searchInput.value = result.name || result.label?.split(',')[0] || '';
   hideSuggestions();
+  elements.searchInput.blur();
   void searchAndDisplayPlaces(result.lat, result.lng, result.name || result.label?.split(',')[0] || '검색한 위치', null, 1000, false);
 }
 
@@ -309,6 +310,7 @@ function schedulePlaceSuggestions() {
 
 function chooseSuggestionFromResult(result) {
   hideSuggestions();
+  elements.searchInput.blur();
   const label = result.name || result.label?.split(',')[0] || '검색한 위치';
   elements.searchInput.value = label;
   return searchAndDisplayPlaces(result.lat, result.lng, label, null, 1000, false);
