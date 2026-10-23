@@ -70,3 +70,24 @@ body.map-first { height: 100dvh; min-height: 0; overflow: hidden; display: flex;
 
 .bottom-sheet { overscroll-behavior-y: contain; }
 .sheet-handle { width: 44px; height: 5px; background: #c3cec8; }
+
+/* 목록 스크롤을 검색 영역 아래로 제한합니다. */
+.map-first .list-panel {
+  position: absolute;
+  top: var(--list-top, 150px);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: auto;
+  padding: 0 14px 100px;
+  overscroll-behavior-y: contain;
+  scroll-padding-top: 90px;
+}
+.map-first .results-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 0 0 12px;
+  padding: 14px 0 12px;
+  background: var(--paper);
+}

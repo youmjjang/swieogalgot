@@ -1123,6 +1123,20 @@ async function locateOnArrival() {
   }
 }
 
+function observeSearchLayout() {
+  const location = document.querySelector('.location-section');
+  if (!location || !window.ResizeObserver) return;
+  const update = () => {
+    const offset = location.getBoundingClientRect().bottom - elements.mainContent.getBoundingClientRect().top + 12;
+    elements.mainContent.style.setProperty('--list-top', Math.max(0, offset) + 'px');
+  };
+  const observer = new ResizeObserver(update);
+  observer.observe(location);
+  observer.observe(document.querySelector('.header'));
+  window.addEventListener('resize', update);
+  update();
+}
+
 function initializeApp() {
   elements.mainContent.hidden = false;
   initializeMap();
@@ -1132,6 +1146,7 @@ function initializeApp() {
   setView('map');
   updateNavigationControls();
   invalidateVisibleMap();
+  observeSearchLayout();
   void locateOnArrival();
 }
 
