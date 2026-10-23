@@ -551,7 +551,7 @@ function renderMarkers() {
       ? { icon: window.UserHeading.createUserIcon(heading), zIndexOffset: 900 }
       : { zIndexOffset: 900 };
     appState.userMarker = L.marker([appState.userLocation.lat, appState.userLocation.lng], options)
-      .addTo(map).bindPopup('내 위치');
+      .addTo(map);
   }
 
   const origin = appState.searchOrigin;
