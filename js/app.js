@@ -361,9 +361,7 @@ function acceptPlaceUpdate(update, token, preserveExisting) {
       elements.locationHint.textContent += ' 일부 장소 데이터 조회에 실패해 결과가 빠질 수 있어요.';
       Utils.showToast('일부 장소 데이터를 불러오지 못했어요. 잠시 후 다시 검색해 주세요.');
     }
-    const pending = appState.places.filter(place => !appState.enrichedPlaceIds.has(place.id)).slice(0, Math.max(0, 12 - appState.enrichedPlaceIds.size));
-    pending.forEach(place => appState.enrichedPlaceIds.add(place.id));
-    if (pending.length) void enrichWalkingRoutes(token, pending, { ...appState.searchOrigin });
+    // 도보 경로는 선택한 장소에 대해서만 요청합니다.
   }
 }
 
@@ -473,24 +471,6 @@ async function searchAndDisplayPlaces(lat, lng, label = '선택한 위치', accu
   }
 }
 
-async function enrichWalkingRoutes(token, places, origin) {
-  if (!places.length || token !== appState.searchToken) return;
-  try {
-    const routed = await Data.addWalkingRoutes(places, origin);
-    if (token !== appState.searchToken) return;
-    const merged = window.RouteCandidatePreservation
-      ? window.RouteCandidatePreservation.preserve(places, routed)
-      : mergePlaceUpdates(places, routed);
-    const byId = new Map(merged.map(place => [place.id, place]));
-    appState.places = appState.places.map(place => byId.get(place.id) || place);
-    renderPlaces();
-    renderMarkers();
-    if (!appState.backgroundSearching && !appState.searchPartialFailure) elements.locationHint.textContent = `${appState.searchLabel} 주변 장소를 표시했어요.`;
-  } catch (error) {
-    console.warn('주변 장소 경로 계산 실패:', error.message);
-  }
-}
-
 async function getCurrentLocation() {
   if (!navigator.geolocation) {
     Utils.showToast('현재 위치를 사용할 수 없습니다. 주소나 장소를 검색해 주세요.', 'error');
@@ -592,20 +572,22 @@ function renderMarkers() {
 
 function routeSummary(place) {
   if (place.routeStatus === 'ok') return `도보 ${place.routeDistanceText || Data.formatRouteDistance(place.routeDistanceMeters)} · 약 ${place.routeDurationText || Data.formatRouteDuration(place.routeDurationSeconds)}`;
-  if (place.routeStatus === 'error') return '경로를 불러오지 못했어요';
+  const origin = getSearchRouteOrigin();
+  if (origin && Number.isFinite(place.lat) && Number.isFinite(place.lng)) {
+    return '직선거리 ' + Data.formatRouteDistance(haversineMeters([origin.lat, origin.lng], [place.lat, place.lng]));
+  }
   return '';
 }
 
 function renderPlaces() {
   const origin = getSearchRouteOrigin();
   const distance = place => {
-    if (place.routeStatus === 'ok' && Number.isFinite(place.routeDistanceMeters)) return place.routeDistanceMeters;
     return origin && Number.isFinite(place.lat) && Number.isFinite(place.lng)
       ? haversineMeters([origin.lat, origin.lng], [place.lat, place.lng]) : Infinity;
   };
   appState.places.sort((a, b) => distance(a) - distance(b));
   const sortLabel = document.querySelector('.sort-label');
-  if (sortLabel) sortLabel.textContent = appState.places.length && appState.places.every(place => place.routeStatus === 'ok' && Number.isFinite(place.routeDistanceMeters)) ? '도보거리순' : '가까운순';
+  if (sortLabel) sortLabel.textContent = '직선거리순';
   const count = appState.places.length;
   elements.tabCount.textContent = count ? `(${count})` : '';
   elements.resultsCount.textContent = `휴식공간 ${count}곳`;
