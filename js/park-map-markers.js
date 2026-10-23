@@ -26,8 +26,8 @@
     const icon = L.divIcon({
       className: 'place-marker',
       html: `<img class="${markerClasses}" src="${pinImage}" alt="" aria-hidden="true" draggable="false">`,
-      iconSize: [48, 52],
-      iconAnchor: [26, 48]
+      iconSize: [36, 39],
+      iconAnchor: [20, 36]
     });
     const marker = L.marker([lat, lng], {
       icon,
@@ -42,7 +42,7 @@
     const detail = [place.type, summary].filter(Boolean).map(value => escapeHtml(value)).join('<br>');
     marker.bindTooltip(
       `<strong>${escapeHtml(place.name || '휴식공간')}</strong>${detail ? `<br>${detail}` : ''}`,
-      { direction: 'top', offset: [0, -34], opacity: 0.96 }
+      { direction: 'top', offset: [0, -26], opacity: 0.96 }
     );
     marker.on('click', event => {
       if (event?.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);

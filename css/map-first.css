@@ -46,3 +46,27 @@ body.map-first { height: 100dvh; min-height: 0; overflow: hidden; display: flex;
 .map-first .view-tabs { left: 12px; transform: none; width: min(240px, calc(100% - 88px)); padding: 4px; border-radius: 14px; }
 .map-first .tab-btn { min-height: 38px; font-size: 13px; }
 .map-first .btn-map-control { bottom: max(22px, env(safe-area-inset-bottom)); }
+
+/* 현재 위치: 가벼운 알약형 보조 버튼 */
+.map-first #btnCurrentLocation {
+  align-self: center;
+  min-height: 40px;
+  border: 1px solid #dce7e1;
+  border-radius: 999px;
+  padding: 0 14px;
+  gap: 7px;
+  color: #197c68;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(30, 65, 52, .1);
+  font-weight: 600;
+  transition: background .18s, box-shadow .18s, transform .18s;
+}
+.map-first #btnCurrentLocation > [aria-hidden="true"] { flex-basis: 18px; width: 18px; }
+.map-first #btnCurrentLocation svg { display: block; width: 18px; height: 18px; }
+.map-first #btnCurrentLocation:hover { background: #f2faf6; box-shadow: 0 3px 12px rgba(30, 65, 52, .14); }
+.map-first #btnCurrentLocation:active { background: #e6f3ee; transform: scale(.97); }
+.map-first #btnCurrentLocation:focus-visible { outline: 3px solid #a8dacc; outline-offset: 3px; }
+.map-first #btnCurrentLocation:disabled { opacity: .65; cursor: wait; }
+
+.bottom-sheet { overscroll-behavior-y: contain; }
+.sheet-handle { width: 44px; height: 5px; background: #c3cec8; }
