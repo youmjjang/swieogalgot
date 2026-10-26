@@ -181,3 +181,25 @@ body.map-first .list-panel[data-size="expanded"] { height: 100%; }
 body.map-first .location-section { z-index: 50; }
 
 body.map-first .list-scroll-content, body.map-first #listPanel > .bottom-sheet { -webkit-overflow-scrolling: touch; }
+
+/* 안내 문구와 목록 카드의 장식을 줄입니다. */
+body.map-first .location-hint {
+  background: transparent;
+  box-shadow: none;
+  border: 0;
+  border-radius: 0;
+  color: #344a42;
+  text-shadow: 0 1px 2px #fff, 0 0 5px #fff, 0 0 8px #fff;
+}
+body.map-first .places-list { gap: 0; }
+body.map-first .place-card {
+  border: 0;
+  border-bottom: 1px solid #edf1ee;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 17px 2px;
+}
+body.map-first .place-card:hover { background: #f7faf8; box-shadow: none; transform: none; }
+body.map-first .place-card:focus-visible { box-shadow: none; transform: none; }
+body.map-first .place-card.is-selected { background: #f0f7f3; border-bottom-color: #dcebe2; box-shadow: none; }

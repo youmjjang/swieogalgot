@@ -19,15 +19,19 @@
 
     const markerClasses = [
       'place-marker-pin',
+      place.category === 'transit' ? 'pin-transit' : 'pin-rest',
       selected ? 'is-selected' : '',
       dimmed ? 'is-dimmed' : ''
     ].filter(Boolean).join(' ');
-    const pinImage = place.category === 'transit' ? '/images/pin-bus-stop.png' : '/images/pin-bench.png';
+    const symbol = place.category === 'transit'
+      ? '<rect x="10" y="8" width="16" height="19" rx="4" fill="white"/><rect x="12.5" y="12" width="11" height="7" rx="1.5" fill="currentColor"/><rect x="15" y="9.5" width="6" height="1.3" rx=".65" fill="currentColor"/><circle cx="13.5" cy="23" r="1.4" fill="currentColor"/><circle cx="22.5" cy="23" r="1.4" fill="currentColor"/><path d="M12 27v2m12-2v2M8 13v6m20-6v6" stroke="white" stroke-width="2.2" stroke-linecap="round"/>'
+      : '<rect x="9" y="10" width="18" height="4" rx="1.8" fill="white"/><rect x="9" y="15.5" width="18" height="3.5" rx="1.5" fill="white"/><path d="M8 23h20M11 23v6m14-6v6M12 19v4m12-4v4" stroke="white" stroke-width="2.6" stroke-linecap="round"/>';
+    const pin = '<svg viewBox="0 0 36 42" aria-hidden="true"><path fill="currentColor" d="M18 1C8.8 1 2 7.6 2 16.7c0 8.9 10.4 18.5 14.2 22.6a2.4 2.4 0 0 0 3.6 0C23.6 35.2 34 25.6 34 16.7 34 7.6 27.2 1 18 1Z"/>' + symbol + '</svg>';
     const icon = L.divIcon({
       className: 'place-marker',
-      html: `<img class="${markerClasses}" src="${pinImage}" alt="" aria-hidden="true" draggable="false">`,
-      iconSize: [36, 39],
-      iconAnchor: [20, 36]
+      html: `<span class="${markerClasses}" aria-hidden="true">${pin}</span>`,
+      iconSize: [32, 38],
+      iconAnchor: [16, 37]
     });
     const marker = L.marker([lat, lng], {
       icon,

@@ -1,5 +1,10 @@
-/* 버스정류장은 파란 정류장 핀, 그 외 장소는 초록 벤치 핀. */
+/* 단색 핀과 간결한 흰색 아이콘 */
 .place-marker { display: grid; place-items: start center; border: 0; background: transparent; }
-.place-marker-pin { display: block; width: 36px; height: 39px; object-fit: contain; transform-origin: 54% 92%; filter: drop-shadow(0 2px 3px rgba(22,45,36,.25)); }
+.place-marker-pin { display: block; width: 32px; height: 38px; transform-origin: 50% 100%; filter: none; }
+.place-marker-pin svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.pin-transit { color: #438fce; }
+.pin-rest { color: #269d7b; }
+.pin-transit.is-selected { color: #226fae; }
+.pin-rest.is-selected { color: #13795c; }
 .leaflet-marker-icon.place-marker:hover { z-index: 1000 !important; }
-.legend-place { background: #16836d; }
+.legend-place { background: #269d7b; }
