@@ -174,3 +174,8 @@ body.map-first .list-panel .results-header { touch-action: none; user-select: no
 /* 목록이 절반 이상 올라오면 지도 위치 버튼을 숨깁니다. */
 body.map-first .main-content.list-covers-half #btnRecenter,
 body.map-first .main-content.list-covers-half #btnUserLocation { visibility: hidden; pointer-events: none; }
+
+/* 목록을 끝까지 올리면 검색창 위를 덮습니다. */
+body.map-first .list-panel { max-height: 100%; }
+body.map-first .list-panel[data-size="expanded"] { height: 100%; }
+body.map-first .location-section { z-index: 50; }

@@ -4,7 +4,7 @@
   const main = panel.parentElement;
   let drag = null, momentum = 0;
   function limits() {
-    const available = main.getBoundingClientRect().height - (parseFloat(main.style.getPropertyValue('--list-top')) || 150);
+    const available = main.getBoundingClientRect().height;
     return { min: Math.min(110, available), max: Math.max(0, available) };
   }
   function setHeight(value) {
