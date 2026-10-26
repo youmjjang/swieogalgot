@@ -19,6 +19,8 @@
   const syncControls = () => {
     const height = panel.classList.contains('active') ? panel.getBoundingClientRect().height : 0;
     main.style.setProperty('--list-overlay-height', height + 'px');
+    const mainHeight = main.getBoundingClientRect().height;
+    main.classList.toggle('list-covers-half', height > 0 && height >= mainHeight * .5);
     handle.setAttribute('aria-valuemin', Math.round(limits().min));
     handle.setAttribute('aria-valuemax', Math.round(limits().max));
     handle.setAttribute('aria-valuenow', Math.round(height));
@@ -31,13 +33,15 @@
   handle.setAttribute('aria-orientation', 'horizontal');
   handle.setAttribute('aria-label', '목록 높이 조절');
   handle.title = '위아래로 자유롭게 끌어 높이 조절';
-  handle.addEventListener('pointerdown', event => {
+  panel.addEventListener('pointerdown', event => {
+    const zone = event.target.closest('.list-drag-handle, .results-header');
+    if (!zone || !panel.contains(zone)) return;
     if (event.button !== 0 || !event.isPrimary) return;
     stop();
     drag = { id: event.pointerId, y: event.clientY, height: panel.getBoundingClientRect().height, lastY: event.clientY, time: event.timeStamp, velocity: 0, moved: false };
-    handle.setPointerCapture(event.pointerId);
+    panel.setPointerCapture(event.pointerId);
   });
-  handle.addEventListener('pointermove', event => {
+  panel.addEventListener('pointermove', event => {
     if (!drag || drag.id !== event.pointerId) return;
     const delta = drag.y - event.clientY;
     if (Math.abs(delta) > 3) drag.moved = true;
@@ -47,7 +51,7 @@
     drag.lastY = event.clientY; drag.time = event.timeStamp;
     setHeight(drag.height + delta);
   });
-  handle.addEventListener('pointerup', event => {
+  panel.addEventListener('pointerup', event => {
     if (!drag || drag.id !== event.pointerId) return;
     const moved = drag.moved;
     let velocity = event.timeStamp - drag.time > 90 ? 0 : Math.max(-1.5, Math.min(1.5, drag.velocity));
@@ -69,8 +73,8 @@
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches && Math.abs(velocity) > .05) momentum = requestAnimationFrame(glide);
   });
   const cancel = () => { drag = null; stop(); };
-  handle.addEventListener('pointercancel', cancel);
-  handle.addEventListener('lostpointercapture', () => { drag = null; });
+  panel.addEventListener('pointercancel', cancel);
+  panel.addEventListener('lostpointercapture', () => { drag = null; });
   handle.addEventListener('keydown', event => {
     if (!['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault(); stop();

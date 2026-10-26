@@ -16,7 +16,7 @@
   }, { passive: true, capture: true });
   let lastY = null;
   document.addEventListener('touchstart', event => {
-    lastY = event.touches.length === 1 && !event.target.closest('input, button, .search-suggestions, .bottom-sheet, .list-drag-handle') ? event.touches[0].clientY : null;
+    lastY = event.touches.length === 1 && !event.target.closest('input, button, .search-suggestions, .bottom-sheet, .list-drag-handle, .results-header') ? event.touches[0].clientY : null;
   }, { passive: true, capture: true });
   document.addEventListener('touchmove', event => {
     if (lastY === null || event.touches.length !== 1) return;

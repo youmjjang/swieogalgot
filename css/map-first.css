@@ -167,3 +167,10 @@ body.map-first .list-panel[data-size="peek"] { height: 240px; }
 body.map-first .list-scroll-content { padding-bottom: 24px; }
 
 body.map-first .list-drag-handle { user-select: none; -webkit-user-select: none; }
+
+/* 목록 제목과 여백 전체를 패널 드래그 영역으로 사용합니다. */
+body.map-first .list-panel .results-header { touch-action: none; user-select: none; -webkit-user-select: none; cursor: ns-resize; padding-top: 8px; }
+
+/* 목록이 절반 이상 올라오면 지도 위치 버튼을 숨깁니다. */
+body.map-first .main-content.list-covers-half #btnRecenter,
+body.map-first .main-content.list-covers-half #btnUserLocation { visibility: hidden; pointer-events: none; }
