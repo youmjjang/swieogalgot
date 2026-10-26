@@ -165,3 +165,5 @@ body.map-first:is(.navigation-mode, .search-route-mode) .list-panel { display: n
 body.map-first .view-tabs { display: none; }
 body.map-first .list-panel[data-size="peek"] { height: 240px; }
 body.map-first .list-scroll-content { padding-bottom: 24px; }
+
+body.map-first .list-drag-handle { user-select: none; -webkit-user-select: none; }

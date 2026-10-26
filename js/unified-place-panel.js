@@ -12,7 +12,7 @@
   window.UnifiedPlacePanel = {
     open() {
       window.PanelHistory?.record('detail', window.appState.selectedPlace);
-      if (!document.body.classList.contains('place-detail-open')) snapshot = { size: panel.dataset.size || 'half', scroll: content.scrollTop };
+      if (!document.body.classList.contains('place-detail-open')) snapshot = { size: panel.dataset.size || 'half', height: panel.style.height, scroll: content.scrollTop };
       document.body.classList.add('place-detail-open', 'list-open');
       panel.classList.add('active'); panel.hidden = false;
       panel.dataset.size = snapshot.size === 'peek' ? 'half' : snapshot.size;
@@ -33,6 +33,7 @@
       returning = false;
       document.getElementById('tabList').click();
       panel.dataset.size = size || snapshot.size;
+      if (!size && snapshot.height) panel.style.height = snapshot.height;
       content.scrollTop = snapshot.scroll;
       window.requestAnimationFrame(() => { content.scrollTop = snapshot.scroll; });
     }
