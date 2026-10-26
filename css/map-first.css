@@ -148,7 +148,7 @@ body.map-first .list-scroll-content { flex: 1; min-height: 0; overflow-y: auto; 
 body.map-first .list-panel .results-header { background: #fff; padding-top: 0; }
 body.map-first .view-tabs { z-index: 800; }
 body.map-first.list-open .map-marker-legend { display: none; }
-body.map-first.list-open .btn-map-control { bottom: calc(50% + 12px); }
+body.map-first.list-open .btn-map-control { bottom: max(22px, calc(var(--list-overlay-height, 0px) + 12px)); }
 
 /* 목록과 상세는 하나의 패널 안에서 전환합니다. */
 body.map-first.place-detail-open .list-scroll-content { display: none; }
@@ -160,3 +160,8 @@ body.map-first.place-detail-open .sheet-backdrop { display: none; }
 body.map-first .btn-back-list { display: block; margin: 0 0 12px; padding: 5px 0; color: #197c68; background: transparent; border: 0; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 
 body.map-first:is(.navigation-mode, .search-route-mode) .list-panel { display: none !important; }
+
+/* 처음부터 목록 일부를 보여주고 지도·목록 전환 버튼을 없앱니다. */
+body.map-first .view-tabs { display: none; }
+body.map-first .list-panel[data-size="peek"] { height: 240px; }
+body.map-first .list-scroll-content { padding-bottom: 24px; }

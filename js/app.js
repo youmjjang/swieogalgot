@@ -616,9 +616,9 @@ function setView(view) {
   elements.tabMap.setAttribute('aria-selected', String(showMap));
   elements.tabList.setAttribute('aria-selected', String(!showMap));
   elements.mapPanel.classList.add('active');
-  document.body.classList.toggle('list-open', !showMap);
-  if (!showMap) elements.listPanel.dataset.size = 'half';
-  elements.listPanel.classList.toggle('active', !showMap);
+  document.body.classList.add('list-open');
+  elements.listPanel.dataset.size = showMap ? 'peek' : 'half';
+  elements.listPanel.classList.add('active');
   elements.listPanel.hidden = false;
   invalidateVisibleMap();
 }
