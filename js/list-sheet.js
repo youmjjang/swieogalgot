@@ -72,7 +72,25 @@
       if (Math.abs(velocity) > .025 && Math.abs(next - current) > .1) momentum = requestAnimationFrame(glide);
       else momentum = 0;
     }
-    if (!matchMedia('(prefers-reduced-motion: reduce)').matches && Math.abs(velocity) > .05) momentum = requestAnimationFrame(glide);
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (Math.abs(velocity) >= .18) {
+      // 의도적으로 멈춘 경우가 아니라면 쓸어 올린 방향의 끝까지 이동합니다.
+      const start = panel.getBoundingClientRect().height;
+      const target = velocity > 0 ? limits().max : limits().min;
+      if (reducedMotion) { setHeight(target); return; }
+      const started = performance.now();
+      const duration = Math.max(240, Math.min(420, Math.abs(target - start) / Math.max(.8, Math.abs(velocity))));
+      function finishFlick(now) {
+        const progress = Math.min(1, (now - started) / duration);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        setHeight(start + (target - start) * eased);
+        if (progress < 1) momentum = requestAnimationFrame(finishFlick);
+        else momentum = 0;
+      }
+      momentum = requestAnimationFrame(finishFlick);
+    } else if (!reducedMotion && Math.abs(velocity) > .05) {
+      momentum = requestAnimationFrame(glide);
+    }
   });
   const cancel = () => { drag = null; stop(); };
   panel.addEventListener('pointercancel', cancel);
