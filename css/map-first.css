@@ -203,3 +203,24 @@ body.map-first .place-card {
 body.map-first .place-card:hover { background: #f7faf8; box-shadow: none; transform: none; }
 body.map-first .place-card:focus-visible { box-shadow: none; transform: none; }
 body.map-first .place-card.is-selected { background: #f0f7f3; border-bottom-color: #dcebe2; box-shadow: none; }
+
+/* 지도 위 위치 버튼을 작고 가볍게 맞춥니다. */
+body.map-first :is(#btnRecenter, #btnUserLocation) {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 12px;
+  font-size: 20px;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(30, 65, 52, .08);
+}
+
+
+/* 검색 버튼 색상을 브랜드 초록에 맞춥니다. */
+body.map-first .btn-search { background: #397f6c; color: #fff; }
+body.map-first .btn-search:hover { background: #2e6d5c; }
+body.map-first .btn-search:active { background: #275f50; }
+
+/* 작은 지도 위치 버튼은 원형으로 표시합니다. */
+body.map-first :is(#btnRecenter, #btnUserLocation) { border-radius: 50%; }
