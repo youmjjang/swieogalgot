@@ -224,3 +224,26 @@ body.map-first .btn-search:active { background: #275f50; }
 
 /* 작은 지도 위치 버튼은 원형으로 표시합니다. */
 body.map-first :is(#btnRecenter, #btnUserLocation) { border-radius: 50%; }
+
+/* 헤더 로고에만 은은한 경계를 더합니다. */
+.brand-logo-frame {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  background: #f6f3e9;
+  border: 1px solid #e3e2d5;
+  border-radius: 12px;
+}
+.brand-logo-frame .brand-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 0;
+  mix-blend-mode: multiply;
+}
+@media (max-width: 600px) {
+  .brand-logo-frame { flex-basis: 40px; width: 40px; height: 40px; border-radius: 11px; }
+  .brand-logo-frame .brand-logo { width: 36px; height: 36px; }
+}
