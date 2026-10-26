@@ -38,7 +38,7 @@
     if (!zone || !panel.contains(zone)) return;
     if (event.button !== 0 || !event.isPrimary) return;
     stop();
-    drag = { id: event.pointerId, y: event.clientY, height: panel.getBoundingClientRect().height, lastY: event.clientY, time: event.timeStamp, velocity: 0, moved: false };
+    drag = { id: event.pointerId, y: event.clientY, height: panel.getBoundingClientRect().height, lastY: event.clientY, time: event.timeStamp, velocity: 0, samples: [{ y: event.clientY, time: event.timeStamp }], moved: false };
     panel.setPointerCapture(event.pointerId);
   });
   panel.addEventListener('pointermove', event => {
@@ -46,15 +46,17 @@
     const delta = drag.y - event.clientY;
     if (Math.abs(delta) > 3) drag.moved = true;
     if (!drag.moved) return;
-    const dt = Math.max(1, event.timeStamp - drag.time);
-    drag.velocity = (drag.lastY - event.clientY) / dt;
+    drag.samples.push({ y: event.clientY, time: event.timeStamp });
+    drag.samples = drag.samples.filter(sample => event.timeStamp - sample.time <= 100);
+    const first = drag.samples[0];
+    drag.velocity = (first.y - event.clientY) / Math.max(1, event.timeStamp - first.time);
     drag.lastY = event.clientY; drag.time = event.timeStamp;
     setHeight(drag.height + delta);
   });
   panel.addEventListener('pointerup', event => {
     if (!drag || drag.id !== event.pointerId) return;
     const moved = drag.moved;
-    let velocity = event.timeStamp - drag.time > 90 ? 0 : Math.max(-1.5, Math.min(1.5, drag.velocity));
+    let velocity = event.timeStamp - drag.time > 120 ? 0 : Math.max(-3.5, Math.min(3.5, drag.velocity * 1.15));
     drag = null;
     if (!moved) return;
     if (!document.body.classList.contains('place-detail-open')) {
@@ -66,7 +68,7 @@
       const dt = Math.min(32, now - previous); previous = now;
       const current = panel.getBoundingClientRect().height;
       const next = setHeight(current + velocity * dt);
-      velocity *= Math.pow(.86, dt / 16);
+      velocity *= Math.pow(.94, dt / 16);
       if (Math.abs(velocity) > .025 && Math.abs(next - current) > .1) momentum = requestAnimationFrame(glide);
       else momentum = 0;
     }

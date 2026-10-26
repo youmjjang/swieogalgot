@@ -179,3 +179,5 @@ body.map-first .main-content.list-covers-half #btnUserLocation { visibility: hid
 body.map-first .list-panel { max-height: 100%; }
 body.map-first .list-panel[data-size="expanded"] { height: 100%; }
 body.map-first .location-section { z-index: 50; }
+
+body.map-first .list-scroll-content, body.map-first #listPanel > .bottom-sheet { -webkit-overflow-scrolling: touch; }
